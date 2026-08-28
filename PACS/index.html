@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" href="./icon.svg" type="image/svg+xml">
+	<link rel="apple-touch-icon" href="./icon.svg">
+	<link rel="manifest" href="./manifest.json">
+	<meta name="theme-color" content="#0b5149">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<title>Vanguard One | Command Center</title>
+	<style>
+		:root { --ink:#18211f; --muted:#71807a; --paper:#f4f6f1; --panel:#ffffff; --line:#dfe6df; --field:#fbfcf9; --soft:#edf4e8; --soft-ink:#41734a; --lime:#c8f169; --teal:#0b5149; --coral:#ff846b; --gold:#e6b957; }
+		body.dark-mode { --ink:#e7eee8; --muted:#a6b5ac; --paper:#18211f; --panel:#22302c; --line:#35453f; --field:#1c2925; --soft:#2d463d; --soft-ink:#c7e8b2; --lime:#c8f169; --teal:#0d6b60; --coral:#ff927c; --gold:#e6b957; }
+		* { box-sizing:border-box; }
+		body { margin:0; color:var(--ink); background:var(--paper); font-family: "Trebuchet MS", "Segoe UI", sans-serif; overflow-x:hidden; }
+		button, input, textarea { font:inherit; }
+		button { cursor:pointer; }
+		.shell { display:grid; grid-template-columns:246px 1fr; min-height:100vh; }
+		aside { background:var(--teal); color:#edf6e7; padding:28px 18px; display:flex; flex-direction:column; }
+		.brand { display:flex; align-items:center; gap:11px; padding:0 12px 42px; }
+		.brand-mark { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; color:var(--teal); background:var(--lime); font-weight:900; font-size:14px; }
+		.brand strong { display:block; letter-spacing:2px; font-size:15px; }
+		.brand small { color:#9ec6ae; font-size:10px; letter-spacing:1.1px; }
+		.nav-label { color:#84b19d; text-transform:uppercase; letter-spacing:1.5px; font-size:10px; padding:0 13px 10px; }
+		nav { display:grid; gap:5px; }
+		.nav-item { border:0; color:#c6ddd0; text-align:left; background:transparent; padding:11px 13px; border-radius:8px; display:flex; align-items:center; gap:12px; font-size:13px; }
+		.nav-item:hover, .nav-item.active { color:var(--ink); background:var(--lime); }
+		.nav-item span { width:18px; text-align:center; font-size:16px; }
+		.aside-foot { margin-top:auto; border-top:1px solid #28665d; padding:18px 12px 0; color:#a6c8b6; font-size:11px; line-height:1.5; }
+		main { min-width:0; padding:30px clamp(24px, 4vw, 62px) 54px; }
+		.topbar { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:38px; }
+		.eyebrow { color:var(--teal); letter-spacing:2px; text-transform:uppercase; font-size:10px; font-weight:800; }
+		h1 { font-family:Georgia, serif; font-weight:400; font-size:clamp(31px, 4vw, 48px); letter-spacing:-1.5px; margin:8px 0 0; }
+		.top-actions { display:flex; align-items:center; gap:12px; }
+		.install-button { display:none; border:1px solid var(--line); background:var(--panel); color:var(--teal); border-radius:7px; padding:10px 12px; font-size:11px; font-weight:bold; }
+		.install-button.visible { display:block; }
+		.date { color:var(--muted); font-size:12px; }
+		.avatar { width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:50%; background:var(--coral); font-weight:bold; }
+		.avatar:hover, .avatar:focus-visible { outline:3px solid var(--lime); outline-offset:2px; }
+		.btn { border:0; border-radius:7px; padding:12px 16px; font-weight:800; font-size:12px; letter-spacing:.3px; }
+		.btn.primary { background:var(--ink); color:white; box-shadow:0 5px 0 #b9c5bd; }
+		.btn.primary:hover { transform:translateY(1px); box-shadow:0 3px 0 #b9c5bd; }
+		.hero-grid { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(280px, .6fr); gap:18px; }
+		.hero { background:var(--lime); min-height:220px; border-radius:12px; padding:28px 30px; position:relative; overflow:hidden; }
+		.hero:after { content:""; position:absolute; width:210px; height:210px; right:-54px; bottom:-90px; border:34px solid rgba(255,255,255,.27); border-radius:50%; }
+		.hero h2 { font-family:Georgia, serif; font-weight:400; font-size:32px; margin:18px 0 8px; max-width:430px; }
+		.hero p { color:#536245; font-size:13px; max-width:420px; margin:0; line-height:1.5; }
+		.hero .btn { background:var(--teal); color:white; margin-top:24px; position:relative; z-index:1; }
+		.countdown { background:var(--ink); color:#e9f1e9; border-radius:12px; padding:27px; display:flex; flex-direction:column; justify-content:space-between; }
+		.countdown .eyebrow { color:#9dcc7b; }
+		.count-number { font-family:Georgia, serif; font-size:68px; line-height:1; color:white; }
+		.countdown p { margin:0; color:#9daea6; font-size:12px; }
+		.stats { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:12px; margin:18px 0 35px; }
+		.stat { background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:17px 18px; }
+		.stat .label { color:var(--muted); font-size:11px; }
+		.stat strong { display:block; font-size:25px; margin-top:11px; }
+		.delta { color:#568b42; font-size:10px; margin-left:5px; font-weight:normal; }
+		.section-head { display:flex; justify-content:space-between; align-items:end; margin-bottom:15px; }
+		h3 { font-family:Georgia, serif; font-size:22px; font-weight:400; margin:0; }
+		.link { border:0; background:transparent; color:var(--teal); font-size:11px; font-weight:bold; }
+		.content-grid { display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr); gap:28px; }
+		.plan, .capture, .leaks { background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+		.plan { overflow:hidden; }
+		.plan-row { display:grid; grid-template-columns:minmax(42px,55px) minmax(0,1fr) auto auto; align-items:center; gap:14px; padding:17px 20px; border-top:1px solid var(--line); }
+		.plan-row:first-child { border:0; }
+		.time { color:var(--muted); font-size:11px; font-weight:bold; }
+		.plan-row strong { display:block; font-size:13px; }
+		.plan-row small { color:var(--muted); font-size:11px; display:block; margin-top:5px; }
+		.tag { background:var(--soft); color:var(--soft-ink); border-radius:4px; padding:5px 6px; font-size:9px; text-align:center; font-weight:bold; }
+		.tag.coral { background:#fff0eb; color:#b35745; }
+		.capture { padding:21px; }
+		.capture textarea { display:block; width:100%; min-height:104px; resize:vertical; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--ink); padding:13px; margin:15px 0 11px; outline-color:var(--teal); font-size:12px; }
+		.dark-mode input, .dark-mode textarea, .dark-mode select { color:var(--ink); background:var(--field); }
+		.dark-mode .chip { background:var(--panel); color:var(--muted); }
+		.dark-mode .tag.coral, .dark-mode .result-badge.pending { background:#54352f; color:#ffc0b2; }
+		.dark-mode .list-item .delete-button, .dark-mode .plan-row .delete-button { background:#3d2925; color:#ffc0b2; border-color:#795047; }
+		.dark-mode .list-item .delete-button:hover, .dark-mode .plan-row .delete-button:hover { background:#54352f; }
+		.dark-mode .hero p { color:#d0e0ba; }
+		.dark-mode .btn.primary { box-shadow:0 5px 0 #0d403a; }
+		.dark-mode .btn.primary:hover { box-shadow:0 3px 0 #0d403a; }
+		.capture-foot { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+		.capture-foot small { color:var(--muted); font-size:10px; }
+		.quick-chips { display:flex; gap:5px; flex-wrap:wrap; margin-top:16px; }
+		.chip { border:1px solid var(--line); border-radius:20px; padding:7px 10px; background:white; font-size:10px; color:var(--muted); }
+		.leaks { margin-top:28px; padding:21px; }
+		.leak { display:flex; justify-content:space-between; gap:15px; border-top:1px solid var(--line); padding:14px 0; }
+		.leak:first-of-type { margin-top:4px; }
+		.leak strong { font-size:12px; display:block; }
+		.leak small { color:var(--muted); font-size:10px; }
+		.bar { width:100px; height:6px; background:#edf0eb; border-radius:10px; margin-top:8px; overflow:hidden; }
+		.bar i { display:block; height:100%; background:var(--coral); border-radius:10px; }
+		.page-view { display:none; }
+		.page-view.active { display:block; animation:page-in .22s ease-out; }
+		@keyframes page-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+		.page-intro { display:flex; justify-content:space-between; align-items:end; gap:18px; margin-bottom:24px; }
+		.page-intro > div, .view-card, .performance-card, .list-item > div { min-width:0; }
+		.page-intro p { color:var(--muted); font-size:12px; margin:9px 0 0; line-height:1.5; max-width:560px; }
+		.page-actions { display:flex; gap:8px; flex-wrap:wrap; }
+		.page-actions .btn { white-space:normal; }
+		.view-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+		.view-card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px; }
+		.view-card h4 { margin:0 0 6px; font-family:Georgia,serif; font-size:18px; font-weight:400; }
+		.view-card p { color:var(--muted); font-size:11px; line-height:1.5; margin:0; }
+		.theme-toggle { display:flex; align-items:center; gap:10px; color:var(--ink); font-size:12px; font-weight:bold; cursor:pointer; }
+		.theme-toggle input { width:18px; height:18px; accent-color:var(--teal); }
+		.settings-form { display:grid; gap:14px; }
+		.settings-field { display:grid; gap:6px; color:var(--muted); font-size:11px; font-weight:bold; }
+		.settings-field select { width:100%; padding:11px; border:1px solid var(--line); border-radius:6px; background:var(--field); color:var(--ink); }
+		.settings-check { display:flex; align-items:center; gap:10px; color:var(--ink); font-size:12px; font-weight:bold; }
+		.settings-check input { width:18px; height:18px; accent-color:var(--teal); }
+		body.compact-mode .plan-row { padding-top:11px; padding-bottom:11px; }
+		body.compact-mode .view-card, body.compact-mode .performance-card { padding:16px; }
+		.list-item { display:flex; justify-content:space-between; align-items:center; gap:15px; padding:14px 0; border-top:1px solid var(--line); }
+		.list-item:first-child { border-top:0; padding-top:0; }
+		.list-item:last-child { padding-bottom:0; }
+		.list-item strong { font-size:12px; display:block; }
+		.list-item small { color:var(--muted); font-size:10px; display:block; margin-top:4px; }
+		.list-item .delete-button, .plan-row .delete-button { flex:none; border:1px solid #f0c9bf; border-radius:5px; padding:6px 8px; color:#b35745; background:#fff8f5; font-size:10px; font-weight:bold; }
+		.list-item .delete-button:hover, .plan-row .delete-button:hover { background:#fff0eb; }
+		.progress { width:88px; height:6px; background:#edf0eb; border-radius:6px; overflow:hidden; flex:none; }
+		.progress i { display:block; height:100%; background:var(--teal); }
+		.metric-row { display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid var(--line); padding:14px 0; }
+		.metric-row:first-child { border-top:0; padding-top:0; }
+		.metric-row strong { font-size:22px; }
+		.metric-row span { color:var(--muted); font-size:11px; }
+		.performance-grid { display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr); gap:14px; }
+		.performance-card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:22px; }
+		.performance-card h3 { margin-bottom:7px; }
+		.performance-card h4 { margin:0 0 6px; font-family:Georgia,serif; font-size:18px; font-weight:400; }
+		.performance-card p { color:var(--muted); font-size:11px; line-height:1.5; margin:0; }
+		.profile-signal { background:var(--ink); color:white; border-radius:9px; padding:20px; margin-bottom:14px; }
+		.profile-signal .eyebrow { color:var(--lime); }
+		.profile-signal h3 { font-size:28px; color:white; margin:12px 0 8px; }
+		.signal-detail { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-top:18px; }
+		.signal-detail div { border-top:1px solid rgba(255,255,255,.18); padding-top:10px; }
+		.signal-detail small { display:block; color:#a7b9b0; font-size:10px; margin-bottom:5px; }
+		.signal-detail strong { display:block; font-size:12px; line-height:1.4; }
+		.performance-form { display:grid; gap:13px; margin-top:18px; }
+		.performance-form label { display:grid; gap:6px; color:var(--muted); font-size:11px; font-weight:bold; }
+		.performance-form input, .performance-form select, .performance-form textarea { width:100%; padding:11px; border:1px solid var(--line); border-radius:6px; background:var(--field); color:var(--ink); }
+		.performance-form textarea { min-height:72px; resize:vertical; }
+		.intervention-list { display:grid; gap:0; margin-top:14px; }
+		.intervention-item { display:flex; justify-content:space-between; gap:16px; align-items:center; border-top:1px solid var(--line); padding:13px 0; }
+		.intervention-item strong { display:block; font-size:12px; }
+		.intervention-item small { display:block; color:var(--muted); font-size:10px; margin-top:4px; line-height:1.4; }
+		.result-badge { color:var(--soft-ink); background:var(--soft); border-radius:4px; padding:5px 7px; font-size:9px; font-weight:bold; white-space:nowrap; }
+		.result-badge.pending { color:#b35745; background:#fff0eb; }
+		.logic-signal { background:var(--ink); color:white; border-radius:9px; padding:22px; margin-bottom:14px; }
+		.logic-signal .eyebrow { color:var(--lime); }
+		.logic-signal h3 { color:white; font-size:27px; margin:12px 0 8px; }
+		.logic-signal p { color:#d2dfd5; font-size:12px; line-height:1.5; margin:0; }
+		.logic-reasons { display:grid; gap:0; margin-top:18px; }
+		.logic-reason { border-top:1px solid rgba(255,255,255,.18); padding:11px 0 0; margin-top:11px; }
+		.logic-reason small { display:block; color:#a7b9b0; font-size:10px; margin-bottom:4px; }
+		.logic-reason strong { display:block; font-size:12px; line-height:1.4; }
+		.logic-card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:22px; }
+		.logic-card h3, .logic-card h4 { margin:0 0 7px; font-family:Georgia,serif; font-weight:400; }
+		.logic-card h3 { font-size:22px; }
+		.logic-card h4 { font-size:18px; }
+		.logic-card p { color:var(--muted); font-size:11px; line-height:1.5; margin:0; }
+		.logic-list { display:grid; gap:0; margin-top:15px; }
+		.logic-item { border-top:1px solid var(--line); padding:13px 0; }
+		.logic-item strong { display:block; font-size:12px; }
+		.logic-item small { display:block; color:var(--muted); font-size:10px; margin-top:4px; line-height:1.4; }
+		.logic-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+		@media (max-width:820px) { .page-intro { align-items:flex-start; flex-direction:column; } .view-grid { grid-template-columns:1fr; } }
+		@media (max-width:820px) { .performance-grid { grid-template-columns:1fr; } }
+		.modal-backdrop { display:none; place-items:center; position:fixed; inset:0; background:rgba(17,35,31,.55); padding:20px; z-index:2; }
+		.modal { width:min(460px,100%); max-height:70vh; overflow-y:scroll; scrollbar-gutter:stable; background:var(--paper); border-radius:12px; padding:26px; box-shadow:0 20px 60px rgba(0,0,0,.25); scrollbar-width:thin; scrollbar-color:var(--teal) var(--line); }
+		.modal::-webkit-scrollbar { width:10px; }
+		.modal::-webkit-scrollbar-track { background:var(--line); border-radius:8px; }
+		.modal::-webkit-scrollbar-thumb { background:var(--teal); border-radius:8px; border:2px solid var(--line); }
+		.profile-modal { width:min(520px,100%); }
+		.profile-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin:20px 0; }
+		.profile-field { border-top:1px solid var(--line); padding-top:10px; min-width:0; }
+		.profile-field small { display:block; color:var(--muted); font-size:10px; margin-bottom:5px; }
+		.profile-field strong { display:block; font-size:12px; overflow-wrap:anywhere; }
+		.modal h2 { font-family:Georgia,serif; font-weight:400; margin:0 0 7px; }
+		.modal p { color:var(--muted); font-size:12px; margin:0 0 18px; }
+		.modal input { width:100%; padding:12px; border:1px solid var(--line); border-radius:6px; margin-bottom:15px; }
+		.modal-actions { display:flex; justify-content:flex-end; gap:8px; }
+		#authView { min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--paper); }
+		.auth-card { width:min(420px,100%); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:30px; box-shadow:0 16px 45px rgba(24,33,31,.08); }
+		.auth-mark { width:42px; height:42px; display:grid; place-items:center; border-radius:50%; color:var(--teal); background:var(--lime); font-weight:900; margin-bottom:20px; }
+		.auth-card h1 { font-size:32px; margin:0; }
+		.auth-card p { color:var(--muted); font-size:12px; line-height:1.5; margin:9px 0 22px; }
+		.auth-card label { display:block; color:var(--muted); font-size:11px; font-weight:bold; margin:14px 0 6px; }
+		.auth-card input { display:block; width:100%; padding:12px; border:1px solid var(--line); border-radius:6px; background:var(--field); color:var(--ink); outline-color:var(--teal); }
+		.auth-card .btn { width:100%; margin-top:18px; }
+		.auth-link { display:block; width:100%; border:0; background:transparent; color:var(--teal); font-size:11px; font-weight:bold; margin-top:16px; }
+		.auth-message { min-height:16px; color:#b35745; font-size:11px; margin:12px 0 0; }
+		.data-message { min-height:16px; color:#b35745; font-size:11px; margin:10px 0 0; }
+		.form-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+		.form-field { display:grid; gap:6px; }
+		.form-field.full { grid-column:1 / -1; }
+		.form-field label { color:var(--muted); font-size:11px; font-weight:bold; }
+		.form-field input, .form-field select, .form-field textarea { width:100%; padding:11px; border:1px solid var(--line); border-radius:6px; background:var(--field); color:var(--ink); }
+		.form-field textarea { min-height:80px; resize:vertical; }
+		.toast { position:fixed; right:20px; bottom:20px; z-index:4; padding:12px 15px; border-radius:7px; color:white; background:var(--ink); font-size:12px; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+		.toast.error { background:#b35745; }
+		[hidden] { display:none !important; }
+		@media (max-width:520px) { .form-grid, .profile-grid { grid-template-columns:1fr; } .form-field.full { grid-column:auto; } .toast { left:16px; right:16px; bottom:16px; } }
+		#appShell { display:none; }
+		#appShell.authenticated { display:grid; }
+		@media (max-width:1100px) { .stats { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+		@media (max-width:820px) { .shell { grid-template-columns:1fr; } aside { padding:15px; } .brand { padding-bottom:16px; } nav { display:flex; overflow:auto; } .nav-label, .aside-foot { display:none; } .nav-item { flex:0 0 auto; } main { padding:24px 16px 40px; } .topbar { align-items:flex-start; margin-bottom:25px; } .date { display:none; } .hero-grid, .content-grid { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2, minmax(0, 1fr)); margin-bottom:25px; } .plan-row { gap:9px; padding-left:14px; padding-right:14px; } .plan-row .delete-button { grid-column:2 / -1; justify-self:start; } .section-head { align-items:flex-start; gap:10px; } }
+		@media (max-width:420px) { .stats { grid-template-columns:1fr; } .topbar { gap:10px; } h1 { font-size:31px; } .hero, .countdown { padding:22px; } .capture-foot { align-items:flex-start; flex-direction:column; } }
+	</style>
+</head>
+<body>
+	<section id="authView" aria-label="Sign in">
+		<form class="auth-card" id="authForm">
+			<div class="auth-mark">V1</div>
+			<div class="eyebrow">Vanguard One</div>
+			<h1>Sign in</h1>
+			<p>Use your email and password to enter your academic command system.</p>
+			<label for="authEmail">Email</label>
+			<input id="authEmail" type="email" autocomplete="email" required>
+			<label for="authPassword">Password</label>
+			<input id="authPassword" type="password" autocomplete="current-password" required>
+			<button class="btn primary" type="submit">SIGN IN</button>
+			<button class="auth-link" id="forgotPassword" type="button">FORGOT PASSWORD?</button>
+			<div class="auth-message" id="authMessage" role="status"></div>
+		</form>
+	</section>
+	<div class="shell" id="appShell">
+		<aside>
+			<div class="brand"><div class="brand-mark">V1</div><div><strong>VANGUARD ONE</strong><small>ACADEMIC COMMAND SYSTEM</small></div></div>
+			<div class="nav-label">Command</div>
+			<nav>
+				<button class="nav-item active" data-page="dashboard"><span>⌂</span>Dashboard</button>
+				<button class="nav-item" data-page="study"><span>◷</span>Study planner</button>
+				<button class="nav-item" data-page="curriculum"><span>▦</span>Curriculum</button>
+				<button class="nav-item" data-page="papers"><span>↗</span>Past papers</button>
+				<button class="nav-item" data-page="errors"><span>⌁</span>Error bank</button>
+			</nav>
+			<div class="nav-label" style="margin-top:28px">Intelligence</div>
+				<button class="nav-item" data-page="countdown"><span>◌</span>Countdowns</button>
+			<nav>
+				<button class="nav-item" data-page="research"><span>⌕</span>Research vault</button>
+				<button class="nav-item" data-page="logic"><span>◇</span>Decision engine</button>
+				<button class="nav-item" data-page="performance"><span>◎</span>Performance Lab</button>
+				<button class="nav-item" data-page="analytics"><span>◒</span>Analytics</button>
+				<button class="nav-item" data-page="settings"><span>⚙</span>Settings</button>
+			</nav>
+			<div class="aside-foot"></div>
+			<button class="nav-item" id="signOutButton" type="button"><span>↪</span>Sign out</button>
+		</aside>
+		<main>
+			<header class="topbar" id="topbar"><div><div class="eyebrow" id="currentDate"></div><h1 id="pageTitle">Command center</h1></div><div class="top-actions"><span class="date" id="syncStatus"></span><button class="install-button" id="installButton" type="button">DOWNLOAD APP</button><button class="avatar" id="userAvatar" type="button" aria-label="Open profile">U</button></div></header>
+			<section class="hero-grid">
+				<div class="hero"><div class="eyebrow">Your next best move</div><h2>Cook a plan that earns marks.</h2><p>Use your captured work to build a focused academic plan.</p><button class="btn" id="cookButton">✦ &nbsp; COOK MY PLAN</button></div>
+				<div class="countdown"><div class="eyebrow">Next big moment</div><div class="count-number" id="assessmentCount">—</div><p id="assessmentLabel">No countdown added</p><p id="assessmentName">Add an exam, test, or study milestone.</p><button class="btn" id="addAssessmentButton" type="button">+ ADD ASSESSMENT</button><button class="delete-button" id="deleteCountdownButton" type="button" hidden>DELETE COUNTDOWN</button></div>
+			</section>
+			<section class="stats" id="stats"></section>
+			<div class="content-grid">
+				<section><div class="section-head"><h3>Today's plan</h3><button class="link" data-page="study">VIEW FULL PLAN →</button></div><div class="plan" id="plan"></div></section>
+				<section><div class="section-head"><h3>Quick capture</h3><span class="eyebrow">DUMP → CLASSIFY</span></div><div class="capture"><textarea id="captureText" placeholder="Enter what happened today."></textarea><div class="capture-foot"><small>Natural language is fine.</small><button class="btn primary" id="captureButton">CAPTURE +</button></div><div class="quick-chips"><button class="chip">+ Studied</button><button class="chip">+ Mistake</button><button class="chip">+ Homework</button><button class="chip">+ Test</button></div></div><div class="leaks"><div class="section-head"><h3>Where marks leak</h3><button class="link" data-page="errors">OPEN BANK →</button></div><div id="leaks"></div></div></section>
+			</div>
+			<section class="page-view" data-view="study"><div class="page-intro"><div><div class="eyebrow">Focus & execution</div><h2>Study planner</h2><p>Turn your saved work into sessions you can actually start.</p></div><div class="page-actions"><button class="btn primary">+ NEW SESSION</button></div></div><div class="view-grid" id="studyData"></div></section>
+			<section class="page-view" data-view="countdown"><div class="page-intro"><div><div class="eyebrow">Time to the moment</div><h2>Countdowns</h2><p>Track the exams, tests, and major study milestones that matter next.</p></div><div class="page-actions"><button class="btn primary">+ NEW COUNTDOWN</button></div></div><div class="view-grid" id="countdownData"></div></section>
+			<section class="page-view" data-view="curriculum"><div class="page-intro"><div><div class="eyebrow">Knowledge map</div><h2>Curriculum</h2><p>See what is learned, what is weak, and what evidence is still missing.</p></div><div class="page-actions"><button class="btn primary">+ ADD TOPIC</button></div></div><div class="view-grid" id="curriculumData"></div></section>
+			<section class="page-view" data-view="papers"><div class="page-intro"><div><div class="eyebrow">Practice under pressure</div><h2>Past papers</h2><p>Attempt, mark, analyze, and retest.</p></div><div class="page-actions"><button class="btn primary">+ ADD PAPER</button></div></div><div class="view-grid" id="papersData"></div></section>
+			<section class="page-view" data-view="errors"><div class="page-intro"><div><div class="eyebrow">Error elimination</div><h2>Error bank</h2><p>Classify the cause, repair the weakness, and verify that the mark is no longer leaking.</p></div><div class="page-actions"><button class="btn primary">+ LOG ERROR</button></div></div><div class="view-grid" id="errorsData"></div></section>
+			<section class="page-view" data-view="research"><div class="page-intro"><div><div class="eyebrow">Sources & findings</div><h2>Research vault</h2><p>Keep source information distinct from personal interpretation and save findings for later retrieval.</p></div><div class="page-actions"><button class="btn primary">+ SAVE RESOURCE</button></div></div><div class="view-grid" id="researchData"></div></section>
+			<section class="page-view" data-view="logic"><div class="page-intro"><div><div class="eyebrow">Evidence to action</div><h2>Decision engine</h2><p>Use your saved errors, topics, sessions, and performance evidence to choose the next useful action.</p></div><div class="page-actions"><button class="btn" id="refreshLogicButton" type="button">REFRESH ANALYSIS</button></div></div><div class="performance-grid"><div><div class="logic-signal"><div class="eyebrow">Best next action</div><h3 id="logicRecommendation">Add your first topic or error</h3><p id="logicExplanation">The engine will compare your saved academic data and identify the highest-priority action.</p><div class="logic-reasons" id="logicReasons"></div></div><div class="logic-card"><h3>Recommended plan</h3><p>Build a short plan from the highest-priority unfinished work.</p><div class="logic-list" id="logicPlan"></div><div class="logic-actions"><button class="btn primary" id="buildLogicPlanButton" type="button">BUILD LOGIC PLAN</button></div><div class="data-message" id="logicMessage" role="status"></div></div></div><div><div class="logic-card"><h4>How the decision is made</h4><p>Unresolved errors come first because they represent lost marks. Weak or unmastered topics come next, followed by unfinished sessions. The current performance bottleneck and nearest deadline add context to the recommendation.</p></div><div class="logic-card" style="margin-top:14px"><h4>Current evidence</h4><div class="logic-list" id="logicEvidence"></div></div></div></div></section>
+			<section class="page-view" data-view="performance"><div class="page-intro"><div><div class="eyebrow">Bottleneck to intervention</div><h2>Performance Lab</h2><p>Identify what is limiting execution, apply one intervention, and measure what changes.</p></div><div class="page-actions"><button class="btn primary" id="performanceResetButton" type="button">RESET PROFILE</button></div></div><div class="performance-grid"><div><div class="profile-signal"><div class="eyebrow">Current bottleneck</div><h3 id="performanceBottleneck">Procrastination</h3><p id="performanceEvidence">No evidence captured yet. Start with the friction you notice most often.</p><div class="signal-detail"><div><small>Intervention</small><strong id="performanceIntervention">5-minute initiation protocol</strong></div><div><small>Next action</small><strong id="performanceNextAction">Start your next subject for 5 minutes</strong></div></div></div><div class="performance-card"><h3>Update the profile</h3><p>Make the problem specific enough to test in one session.</p><form class="performance-form" id="performanceForm"><label for="performanceProblem">Friction<select id="performanceProblem"><option value="Forgetting">Forgetting</option><option value="Procrastination" selected>Procrastination</option><option value="Laziness / low activation">Laziness / low activation</option><option value="Distraction">Distraction</option><option value="Poor concentration">Poor concentration</option><option value="Weak understanding">Weak understanding</option><option value="Repeated mistakes">Repeated mistakes</option><option value="Overconfidence">Overconfidence</option><option value="Underconfidence">Underconfidence</option><option value="Burnout">Burnout</option><option value="Inconsistency">Inconsistency</option><option value="Poor time management">Poor time management</option><option value="Exam anxiety">Exam anxiety</option></select></label><label for="performanceEvidenceInput">Evidence<textarea id="performanceEvidenceInput" placeholder="e.g. Four planned sessions started late this week."></textarea></label><label for="performanceNextActionInput">Next action<input id="performanceNextActionInput" placeholder="e.g. Start Biology - Cell Division for 5 minutes"></label><label for="performanceSuccessInput">Success condition<input id="performanceSuccessInput" placeholder="e.g. Continue if momentum develops; otherwise record the blocker."></label><button class="btn primary" type="submit">SAVE PERFORMANCE PROFILE</button><div class="data-message" id="performanceMessage" role="status"></div></form></div></div><div><div class="performance-card"><h4>Intervention protocol</h4><p id="performanceProtocol">Begin with five minutes. The only requirement is to start; momentum is useful data, not a moral verdict.</p><button class="btn" id="performanceApplyButton" type="button" style="margin-top:16px">START INTERVENTION</button></div><div class="performance-card" style="margin-top:14px"><h4>Measured history</h4><p>Record what happened after each intervention so the system can adapt.</p><div class="intervention-list" id="performanceHistory"></div></div></div></div></section>
+			<section class="page-view" data-view="analytics"><div class="page-intro"><div><div class="eyebrow">Evidence over hours</div><h2>Analytics</h2><p>Measure performance from the data you add.</p></div></div><div class="view-grid" id="analyticsData"></div></section>
+			<section class="page-view" data-view="settings"><div class="page-intro"><div><div class="eyebrow">Personal system</div><h2>Settings</h2><p>Control your academic calendar, planning preferences, and data portability.</p></div></div><div class="view-grid"><div class="view-card"><h4>Data portability</h4><p style="margin-bottom:16px">Export the academic history you have added.</p><button class="btn" id="exportHtmlButton" type="button">EXPORT HTML</button><button class="btn" id="exportPdfButton" type="button" style="margin-left:6px">EXPORT PDF</button></div><div class="view-card"><h4>Appearance</h4><p style="margin-bottom:16px">Choose the display mode for your command center.</p><label class="theme-toggle"><input id="darkModeToggle" type="checkbox"><span>Dark mode</span></label></div><div class="view-card"><h4>Planning preferences</h4><p style="margin-bottom:16px">Set defaults for new study sessions and your weekly rhythm.</p><form class="settings-form" id="settingsForm"><label class="settings-field" for="weekStartsOn">Week starts on<select id="weekStartsOn"><option value="monday">Monday</option><option value="sunday">Sunday</option></select></label><label class="settings-field" for="defaultDuration">Default session length<select id="defaultDuration"><option value="25">25 minutes</option><option value="35">35 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></label><label class="settings-check"><input id="compactDensity" type="checkbox"><span>Use compact page density</span></label><label class="settings-check"><input id="studyReminders" type="checkbox"><span>Show a daily study reminder</span></label><button class="btn primary" type="submit">SAVE PREFERENCES</button><div class="data-message" id="settingsMessage" role="status"></div></form></div></div></section>
+		</main>
+	</div>
+	<div class="modal-backdrop" id="modal"><div class="modal"><h2>Capture received.</h2><p>Your note is ready for classification. Add a short label so it is easy to find later.</p><input id="captureLabel" placeholder="e.g. Biology / Cell division"><div class="modal-actions"><button class="btn" id="closeModal">CANCEL</button><button class="btn primary" id="saveCapture">SAVE TO INBOX</button></div></div></div>
+	<div class="modal-backdrop" id="recordModal"><form class="modal" id="recordForm"><h2 id="recordTitle">Add record</h2><p id="recordDescription">Enter the details to save.</p><div class="form-grid" id="recordFields"></div><div class="data-message" id="recordMessage" role="status"></div><div class="modal-actions"><button class="btn" id="cancelRecord" type="button">CANCEL</button><button class="btn primary" id="saveRecord" type="submit">SAVE</button></div></form></div>
+	<div class="modal-backdrop" id="profileModal"><section class="modal profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle"><h2 id="profileTitle">Your profile</h2><p id="profileDescription">Your account and profile details.</p><div class="profile-grid" id="profileData"></div><div class="data-message" id="profileMessage" role="status"></div><div class="modal-actions"><button class="btn primary" id="closeProfile" type="button">CLOSE</button></div></section></div>
+	<div class="toast" id="toast" hidden role="status"></div>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script>
+		const supabaseUrl = window.PACS_SUPABASE_URL || 'https://kuwnmdxsntaqyhohyaqp.supabase.co';
+		const supabaseAnonKey = window.PACS_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1d25tZHhzbnRhcXlob2h5YXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzg1NTgsImV4cCI6MjEwMjgxNDU1OH0.fKhCpMwRaeHai86lRgJ2RAWoAuq29YQwpsGsSs_Q6FY';
+		const supabaseClient = supabaseUrl && supabaseAnonKey ? window.supabase.createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+		if ('serviceWorker' in navigator && window.location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+		const requireSupabase = () => {
+			if (!supabaseClient) throw new Error('Set PACS_SUPABASE_URL and PACS_SUPABASE_ANON_KEY before using PACS data actions.');
+			return supabaseClient;
+		};
+		const authView = document.getElementById('authView');
+		const appShell = document.getElementById('appShell');
+		const authForm = document.getElementById('authForm');
+		const authMessage = document.getElementById('authMessage');
+		const userAvatar = document.getElementById('userAvatar');
+		const syncStatus = document.getElementById('syncStatus');
+		const installButton = document.getElementById('installButton');
+		const toast = document.getElementById('toast');
+		let deferredInstallPrompt = null;
+		const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+		if (!isInstalled) installButton.classList.add('visible');
+		window.addEventListener('beforeinstallprompt', (event) => {
+			event.preventDefault();
+			deferredInstallPrompt = event;
+			installButton.classList.add('visible');
+		});
+		installButton.addEventListener('click', async () => {
+			if (!deferredInstallPrompt) {
+				showToast('Open your browser menu and choose Install app or Add to Home Screen.');
+				return;
+			}
+			deferredInstallPrompt.prompt();
+			await deferredInstallPrompt.userChoice;
+			deferredInstallPrompt = null;
+			installButton.classList.remove('visible');
+		});
+		const darkModeToggle = document.getElementById('darkModeToggle');
+		const recordModal = document.getElementById('recordModal');
+		const recordForm = document.getElementById('recordForm');
+		const profileModal = document.getElementById('profileModal');
+		const profileData = document.getElementById('profileData');
+		const profileMessage = document.getElementById('profileMessage');
+		let currentSession = null;
+		let capturesLoaded = false;
+		const offlineKey = (name) => 'pacs-offline-' + name + '-' + (currentSession?.user?.id || 'guest');
+		const readOffline = (name, fallback = []) => { try { return JSON.parse(localStorage.getItem(offlineKey(name))) || fallback; } catch (error) { return fallback; } };
+		const writeOffline = (name, value) => localStorage.setItem(offlineKey(name), JSON.stringify(value));
+		const cacheRows = (table, rows) => writeOffline(table, rows || []);
+		const queueOffline = (operation) => { const queue = readOffline('queue'); queue.push(operation); writeOffline('queue', queue); };
+		const createLocalId = () => window.crypto?.randomUUID?.() || 'offline-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+		const saveRecord = async (table, values) => {
+			const userId = currentUserId();
+			if (!userId) throw new Error('Your session has expired. Please sign in again.');
+			if (navigator.onLine && supabaseClient) {
+				try {
+					const { data, error } = await requireSupabase().from(table).insert({ ...values, user_id:userId }).select().single();
+					if (error) throw error;
+					cacheRows(table, [data, ...readOffline(table).filter((row) => row.id !== data.id)]);
+					return data;
+				} catch (error) { if (error.message && !/fetch|network|offline|failed/i.test(error.message)) throw error; }
+			}
+			const offlineId = createLocalId();
+			const data = { ...values, id:offlineId, user_id:userId, created_at:new Date().toISOString(), _offline:true };
+			const rows = readOffline(table);
+			rows.unshift(data);
+			cacheRows(table, rows);
+			queueOffline({ operation:'insert', table, values, localId:offlineId });
+			setSyncStatus('Saved offline. Will sync when connected.', false);
+			return data;
+		};
+		const syncOfflineQueue = async () => {
+			if (!navigator.onLine || !supabaseClient || !currentUserId()) return;
+			const queue = readOffline('queue');
+			if (!queue.length) { setSyncStatus('Online and synced.', true); return; }
+			const remaining = [];
+			for (const operation of queue) {
+				try {
+					if (operation.operation === 'insert') {
+						const { error } = await requireSupabase().from(operation.table).insert({ ...operation.values, user_id:currentUserId() });
+						if (error) throw error;
+					} else if (operation.operation === 'delete') {
+						const { error } = await requireSupabase().from(operation.table).delete().eq('id', operation.id).eq('user_id', currentUserId());
+						if (error) throw error;
+					}
+				} catch (error) { remaining.push(operation); }
+			}
+			writeOffline('queue', remaining);
+			setSyncStatus(remaining.length ? 'Some offline changes are waiting to sync.' : 'Offline changes synced.', !remaining.length);
+			if (!remaining.length) {
+				['plan', 'studyData', 'countdownData', 'curriculumData', 'papersData', 'errorsData', 'researchData'].forEach((id) => { document.getElementById(id).innerHTML = ''; });
+				capturesLoaded = false;
+				await showAuthenticatedApp(currentSession);
+			}
+		};
+		window.addEventListener('online', syncOfflineQueue);
+		const darkModeStorageKey = 'pacs-dark-mode';
+		const setDarkMode = (enabled) => {
+			document.body.classList.toggle('dark-mode', enabled);
+			darkModeToggle.checked = enabled;
+			localStorage.setItem(darkModeStorageKey, String(enabled));
+		};
+		setDarkMode(localStorage.getItem(darkModeStorageKey) === 'true');
+		darkModeToggle.addEventListener('change', () => setDarkMode(darkModeToggle.checked));
+		document.getElementById('settingsForm').addEventListener('submit', (event) => {
+			event.preventDefault();
+			const studyReminders = document.getElementById('studyReminders').checked;
+			writeSettings({ weekStartsOn:document.getElementById('weekStartsOn').value, defaultDuration:document.getElementById('defaultDuration').value, compactDensity:document.getElementById('compactDensity').checked, studyReminders });
+			applySettings();
+			if (studyReminders && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+			document.getElementById('settingsMessage').textContent = 'Preferences saved on this device.';
+		});
+		document.getElementById('currentDate').textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(new Date());
+		const setAuthMessage = (message, isSuccess = false) => {
+			authMessage.textContent = message;
+			authMessage.style.color = isSuccess ? '#568b42' : '#b35745';
+		};
+		const setSyncStatus = (message, isSuccess = false) => {
+			syncStatus.textContent = message;
+			syncStatus.style.color = isSuccess ? '#568b42' : '#b35745';
+		};
+		const showToast = (message, isError = false) => {
+			toast.textContent = message;
+			toast.classList.toggle('error', isError);
+			toast.hidden = false;
+			setTimeout(() => { toast.hidden = true; }, 3500);
+		};
+		const currentUserId = () => currentSession?.user?.id;
+		const settingsStorageKey = () => 'pacs-settings-' + (currentUserId() || 'guest');
+		const defaultSettings = () => ({ weekStartsOn:'monday', defaultDuration:'35', compactDensity:false, studyReminders:false });
+		const readSettings = () => { try { return { ...defaultSettings(), ...(JSON.parse(localStorage.getItem(settingsStorageKey())) || {}) }; } catch (error) { return defaultSettings(); } };
+		const writeSettings = (settings) => localStorage.setItem(settingsStorageKey(), JSON.stringify(settings));
+		const applySettings = () => {
+			const settings = readSettings();
+			document.body.classList.toggle('compact-mode', settings.compactDensity);
+			document.getElementById('weekStartsOn').value = settings.weekStartsOn;
+			document.getElementById('defaultDuration').value = settings.defaultDuration;
+			document.getElementById('compactDensity').checked = settings.compactDensity;
+			document.getElementById('studyReminders').checked = settings.studyReminders;
+		};
+		const maybeSendStudyReminder = async () => {
+			if (!readSettings().studyReminders || !('Notification' in window) || Notification.permission !== 'granted') return;
+			const reminderKey = 'pacs-study-reminder-' + (currentUserId() || 'guest');
+			const today = new Date().toISOString().slice(0, 10);
+			if (localStorage.getItem(reminderKey) === today) return;
+			new Notification('Vanguard One', { body:'Review your study plan and choose your next focused session.' });
+			localStorage.setItem(reminderKey, today);
+		};
+		applySettings();
+		const displayValue = (value) => value === null || value === undefined || value === '' ? 'Not set' : String(value);
+		const profileField = (label, value) => '<div class="profile-field"><small>' + cleanText(label) + '</small><strong>' + cleanText(displayValue(value)) + '</strong></div>';
+		const openProfile = async () => {
+			if (!currentSession) return;
+			profileMessage.textContent = 'Loading profile...';
+			profileData.innerHTML = profileField('Email', currentSession.user.email) + profileField('User ID', currentSession.user.id);
+			profileModal.style.display = 'grid';
+			try {
+				const { data, error } = await requireSupabase().from('profiles').select('display_name, avatar, school, class, academic_year, timezone, created_at, updated_at').eq('user_id', currentSession.user.id).maybeSingle();
+				if (error) throw error;
+				if (!data) {
+					profileMessage.textContent = '';
+					return;
+				}
+				profileData.innerHTML = profileField('Email', currentSession.user.email) + profileField('User ID', currentSession.user.id) + Object.entries(data).map(([key, value]) => profileField(key.replaceAll('_', ' '), value)).join('');
+				profileMessage.textContent = '';
+			} catch (error) {
+				const metadata = currentSession.user.user_metadata || {};
+				const fallbackFields = Object.entries(metadata).filter(([key]) => !['email', 'email_verified', 'phone_verified', 'sub'].includes(key));
+				profileData.innerHTML = profileField('Email', currentSession.user.email) + profileField('User ID', currentSession.user.id) + fallbackFields.map(([key, value]) => profileField(key.replaceAll('_', ' '), value)).join('');
+				profileMessage.textContent = '';
+			}
+		};
+		const ownedInsert = (table, values) => {
+			const userId = currentUserId();
+			if (!userId) throw new Error('Your session has expired. Please sign in again.');
+			return requireSupabase().from(table).insert({ ...values, user_id: userId });
+		};
+		const logActivity = (action, tableName, recordId = null) => {
+			if (!currentUserId()) return Promise.resolve(false);
+			return requireSupabase().from('activity_log').insert({ user_id: currentUserId(), action, table_name: tableName, record_id: recordId }).then(({ error }) => !error).catch(() => false);
+		};
+		const showAuthenticatedApp = async (session) => {
+			if (!session) return;
+			currentSession = session;
+			applySettings();
+			authView.style.display = 'none';
+			appShell.classList.add('authenticated');
+			userAvatar.textContent = (session.user.email || 'U').charAt(0).toUpperCase();
+			renderPerformanceProfile();
+			if (!capturesLoaded) {
+				capturesLoaded = true;
+				await loadCaptures();
+				await Promise.all([
+					loadRows('study_sessions', 'studyData', true),
+					loadRows('countdowns', 'countdownData'),
+					loadRows('curriculum_topics', 'curriculumData'),
+					loadRows('past_papers', 'papersData'),
+					loadRows('error_bank', 'errorsData'),
+					loadRows('research_resources', 'researchData')
+				]);
+			}
+			await Promise.all([renderStats(), loadNextAssessment()]);
+			await loadNextCountdown();
+			await syncOfflineQueue();
+			await maybeSendStudyReminder();
+			renderLogicEngine();
+		};
+		authForm.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			setAuthMessage('');
+			try {
+				const { data, error } = await requireSupabase().auth.signInWithPassword({
+					email: document.getElementById('authEmail').value.trim(),
+					password: document.getElementById('authPassword').value
+				});
+				if (error) throw error;
+				await showAuthenticatedApp(data.session);
+				setAuthMessage('Signed in.', true);
+			} catch (error) {
+				setAuthMessage('Unable to sign in. Check your email and password.');
+			}
+		});
+		document.getElementById('forgotPassword').addEventListener('click', async () => {
+			const email = document.getElementById('authEmail').value.trim();
+			if (!email) {
+				setAuthMessage('Enter your email first.');
+				return;
+			}
+			try {
+				const { error } = await requireSupabase().auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+				if (error) throw error;
+				setAuthMessage('Password reset email sent.', true);
+			} catch (error) {
+				setAuthMessage('Unable to send the reset email. Check your email address.');
+			}
+		});
+		document.getElementById('signOutButton').addEventListener('click', async () => {
+			try {
+				await requireSupabase().auth.signOut();
+				showToast('Signed out.');
+			} catch (error) {
+				showToast('Unable to sign out. Please try again.', true);
+			}
+		});
+		document.getElementById('userAvatar').addEventListener('click', openProfile);
+		document.getElementById('closeProfile').addEventListener('click', () => { profileModal.style.display = 'none'; });
+		const modal = document.getElementById('modal');
+		const captureText = document.getElementById('captureText');
+		let captureCategory = 'OTHER';
+		document.getElementById('captureButton').addEventListener('click', () => {
+			if (!captureText.value.trim()) { captureText.focus(); return; }
+			modal.style.display = 'grid';
+			document.getElementById('captureLabel').focus();
+		});
+		const closeModal = () => { modal.style.display = 'none'; };
+		document.getElementById('closeModal').addEventListener('click', closeModal);
+		document.getElementById('saveCapture').addEventListener('click', async () => {
+			const label = document.getElementById('captureLabel').value.trim() || 'Unsorted capture';
+			try {
+				const data = await saveRecord('captures', { label: cleanText(label), content: captureText.value.trim(), category: captureCategory, detail: 'Captured and ready for review' });
+				addPlanItem(label, 'Captured and ready for review', captureCategory, 'captures', data.id);
+				await logActivity('created record', 'captures');
+				setSyncStatus('Saved to Supabase.', true);
+				captureText.value = '';
+				document.getElementById('captureLabel').value = '';
+				closeModal();
+			} catch (error) {
+				showToast('Unable to save capture. Check your connection and try again.', true);
+			}
+		});
+		document.getElementById('cookButton').addEventListener('click', async (event) => {
+			try {
+				const [topics, errors] = await Promise.all([
+					requireSupabase().from('curriculum_topics').select('name').neq('status', 'MASTERED').limit(2),
+					requireSupabase().from('error_bank').select('mistake, topic').neq('status', 'RESOLVED').limit(1)
+				]);
+				if (topics.error) throw topics.error;
+				if (errors.error) throw errors.error;
+				const recommendations = (topics.data || []).map((topic) => ({ title:'Revise ' + topic.name, topic:topic.name, duration_minutes:35, priority:'HIGH', status:'PLANNED', goal:'Close a curriculum gap' }));
+				(errors.data || []).forEach((item) => recommendations.push({ title:'Repair error', topic:item.topic || item.mistake, duration_minutes:20, priority:'HIGH', status:'PLANNED', goal:'Practise and verify the correction' }));
+				if (!recommendations.length) { showToast('Add a topic or error before cooking a plan.'); return; }
+				for (const recommendation of recommendations.slice(0, 3)) {
+					const data = await saveRecord('study_sessions', recommendation);
+					addPlanItem(recommendation.title, recommendation.duration_minutes + ' minutes', recommendation.priority, 'study_sessions', data.id);
+				}
+				await logActivity('generated study plan', 'study_sessions');
+				event.currentTarget.textContent = '✓  PLAN COOKED';
+				showToast('Study plan saved to Supabase.');
+				await loadRows('study_sessions', 'studyData', true);
+			} catch (error) {
+				showToast('Unable to cook a plan. Check your connection and try again.', true);
+			}
+			setTimeout(() => { event.currentTarget.textContent = '✦  COOK MY PLAN'; }, 2200);
+		});
+		const pageTitles = { dashboard:'Command center', study:'Study planner', countdown:'Countdowns', curriculum:'Curriculum', papers:'Past papers', errors:'Error bank', research:'Research vault', logic:'Decision engine', performance:'Performance Lab', analytics:'Analytics', settings:'Settings' };
+		document.querySelectorAll('.nav-item[data-page]').forEach((item) => item.addEventListener('click', () => {
+			document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
+			item.classList.add('active');
+			const selectedPage = item.dataset.page;
+			document.querySelectorAll('[data-view]').forEach((view) => view.classList.toggle('active', view.dataset.view === selectedPage));
+			document.querySelectorAll('.hero-grid, .stats, .content-grid').forEach((view) => view.style.display = selectedPage === 'dashboard' ? '' : 'none');
+			document.getElementById('pageTitle').textContent = pageTitles[selectedPage];
+		}));
+		document.querySelectorAll('.link[data-page]').forEach((item) => item.addEventListener('click', () => {
+			const target = document.querySelector('.nav-item[data-page="' + item.dataset.page + '"]');
+			if (target) target.click();
+		}));
+		document.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => {
+			captureCategory = ({ Studied:'STUDIED', Mistake:'MISTAKE', Homework:'HOMEWORK', Test:'TEST' })[chip.textContent.replace('+ ', '')] || 'OTHER';
+			captureText.value = chip.textContent.replace('+ ', '') + ' — ';
+			captureText.focus();
+		}));
+		const cleanText = (value) => value.replace(/[<>]/g, '');
+		const deleteRecord = async (table, id, element) => {
+			if (!id || !window.confirm('Delete this record permanently?')) return;
+			try {
+				const offlineRow = readOffline(table).find((row) => row.id === id && row._offline);
+				if (offlineRow) {
+					writeOffline('queue', readOffline('queue').filter((operation) => !(operation.operation === 'insert' && operation.localId === id)));
+				} else if (navigator.onLine && supabaseClient) {
+					const { error } = await requireSupabase().from(table).delete().eq('id', id).eq('user_id', currentUserId());
+					if (error) throw error;
+				} else queueOffline({ operation:'delete', table, id });
+				writeOffline(table, readOffline(table).filter((row) => row.id !== id));
+				document.querySelectorAll('[data-delete-table="' + table + '"][data-delete-id="' + id + '"]').forEach((button) => {
+					const row = button.closest('.list-item, .plan-row');
+					if (row) row.remove();
+				});
+				showToast('Deleted successfully.');
+				if (table === 'countdowns') await loadNextCountdown();
+				if (table === 'assessments') await loadNextAssessment();
+			} catch (error) {
+				showToast('Unable to delete this record.', true);
+			}
+		};
+		const deleteButton = (table, id) => '<button class="delete-button" type="button" data-delete-table="' + cleanText(table) + '" data-delete-id="' + cleanText(id) + '">DELETE</button>';
+		const addPlanItem = (label, detail, tag = 'NEW', table = '', id = '') => {
+			const item = document.createElement('div');
+			item.className = 'plan-row';
+			item.innerHTML = '<span class="time">INBOX</span><div><strong>' + cleanText(label) + '</strong><small>' + cleanText(detail) + '</small></div><span class="tag">' + cleanText(tag) + '</span>' + (table && id ? deleteButton(table, id) : '');
+			document.getElementById('plan').prepend(item);
+		};
+		const addListItem = (container, label, detail, tag = 'NEW', table = '', id = '') => {
+			if (!label) return;
+			const item = document.createElement('div');
+			item.className = 'list-item';
+			item.innerHTML = '<div><strong>' + cleanText(label) + '</strong><small>' + cleanText(detail) + '</small></div><span class="tag">' + cleanText(tag) + '</span>' + (table && id ? deleteButton(table, id) : '');
+			container.append(item);
+		};
+		document.addEventListener('click', (event) => {
+			const button = event.target.closest('[data-delete-table]');
+			if (button) deleteRecord(button.dataset.deleteTable, button.dataset.deleteId, button.closest('.list-item, .plan-row') || button);
+		});
+		const performanceProtocols = {
+			'Forgetting': ['Active recall + spaced review schedule', 'Retrieve the topic from memory before checking notes.'],
+			'Procrastination': ['5-minute initiation protocol', 'Begin with five minutes. Continue only if momentum develops.'],
+			'Laziness / low activation': ['Smallest executable step', 'Reduce the task until the first action takes less than two minutes.'],
+			'Distraction': ['Focus session + distraction log', 'Start one timed block and write distractions down without following them.'],
+			'Poor concentration': ['Short focused blocks + controlled breaks', 'Use a short timer, then take a deliberate break before the next block.'],
+			'Weak understanding': ['Explain-back test', 'Explain the topic aloud without notes, then repair the missing link.'],
+			'Repeated mistakes': ['Error-bank repair cycle', 'Rework one error, state the correction, and verify it with a fresh question.'],
+			'Overconfidence': ['Retrieval test before mastery', 'Attempt questions from memory before marking the topic mastered.'],
+			'Underconfidence': ['Evidence-based progress tracking', 'Record a specific successful retrieval or completed task as evidence.'],
+			'Burnout': ['Work/rest balancing', 'Reduce the workload and schedule recovery before adding another session.'],
+			'Inconsistency': ['Study streak + weekly execution score', 'Choose one repeatable minimum session and score completion at week end.'],
+			'Poor time management': ['Time-budgeted session', 'Choose the time limit first, then define what can fit inside it.'],
+			'Exam anxiety': ['Timed practice + readiness tracking', 'Practise under exam conditions and track readiness from results, not feelings.']
+		};
+		const getLogicData = () => ({
+			topics:readOffline('curriculum_topics').filter((topic) => topic.status !== 'MASTERED' && !readLogicConsumed().has(logicSourceKey('topic', topic))),
+			errors:readOffline('error_bank').filter((item) => item.status !== 'RESOLVED' && !readLogicConsumed().has(logicSourceKey('error', item))),
+			sessions:readOffline('study_sessions').filter((session) => session.status !== 'COMPLETED'),
+			countdowns:readOffline('countdowns').filter((item) => item.target_at && new Date(item.target_at) > new Date())
+		});
+		const logicConsumedKey = () => 'pacs-logic-consumed-' + (currentUserId() || 'guest');
+		const readLogicConsumed = () => { try { return new Set(JSON.parse(localStorage.getItem(logicConsumedKey())) || []); } catch (error) { return new Set(); } };
+		const logicSourceKey = (type, item) => type + ':' + (item.id || item.name || item.topic || item.mistake || item.title);
+		const consumeLogicSource = (type, item) => { const consumed = readLogicConsumed(); consumed.add(logicSourceKey(type, item)); localStorage.setItem(logicConsumedKey(), JSON.stringify([...consumed])); };
+		const buildLogicAnalysis = () => {
+			const data = getLogicData();
+			const profile = readPerformanceProfile();
+			const protocol = performanceProtocols[profile.problem] || performanceProtocols.Procrastination;
+			const rankedErrors = data.errors.slice().sort((left, right) => ({ HIGH:3, MEDIUM:2, LOW:1 }[right.severity] || 0) - ({ HIGH:3, MEDIUM:2, LOW:1 }[left.severity] || 0));
+			const rankedTopics = data.topics.slice().sort((left, right) => (Number(left.confidence) || 0) - (Number(right.confidence) || 0));
+			const plan = [];
+			rankedErrors.slice(0, 2).forEach((item) => plan.push({ title:'Repair ' + (item.topic || 'open error'), detail:item.mistake || 'Rework the error and state the correct method.', priority:item.severity || 'HIGH', sourceType:'error', source:item }));
+			rankedTopics.slice(0, 2).forEach((item) => plan.push({ title:'Revise ' + (item.name || 'unfinished topic'), detail:'Use active recall, then answer one fresh question.', priority:(Number(item.confidence) || 0) < 40 ? 'HIGH' : 'MEDIUM', sourceType:'topic', source:item }));
+			if (!plan.length && data.sessions.length) plan.push({ title:data.sessions[0].title || 'Complete your next study session', detail:data.sessions[0].topic || 'Finish the saved session and record the result.', priority:'MEDIUM', sourceType:'session', source:data.sessions[0] });
+			const first = plan[0];
+			const deadline = data.countdowns.slice().sort((left, right) => new Date(left.target_at) - new Date(right.target_at))[0];
+			const recommendation = first ? first.title : data.sessions.length ? 'Complete your next saved session' : 'Capture a topic, error, or study session';
+			const explanation = first ? 'This is the highest-priority unfinished item in your saved evidence.' : data.sessions.length ? 'You have saved work waiting to be completed and measured.' : 'There is not enough saved evidence to rank an action yet.';
+			return { data, profile, protocol, plan:plan.slice(0, 3), deadline, recommendation, explanation };
+		};
+		const renderLogicEngine = () => {
+			const analysis = buildLogicAnalysis();
+			document.getElementById('logicRecommendation').textContent = analysis.recommendation;
+			document.getElementById('logicExplanation').textContent = analysis.explanation;
+			document.getElementById('logicReasons').innerHTML = [['Bottleneck', analysis.profile.problem], ['Intervention', analysis.protocol[0]], ['Open errors', analysis.data.errors.length], ['Weak topics', analysis.data.topics.length]].map(([label, value]) => '<div class="logic-reason"><small>' + cleanText(label) + '</small><strong>' + cleanText(String(value)) + '</strong></div>').join('');
+			document.getElementById('logicPlan').innerHTML = analysis.plan.length ? analysis.plan.map((item) => '<div class="logic-item"><strong>' + cleanText(item.title) + '</strong><small>' + cleanText(item.detail) + ' Priority: ' + cleanText(item.priority) + '.</small></div>').join('') : '<p>Add evidence to generate a plan.</p>';
+			document.getElementById('logicEvidence').innerHTML = [['Unfinished sessions', analysis.data.sessions.length], ['Next deadline', analysis.deadline ? analysis.deadline.title : 'None added'], ['Performance evidence', analysis.profile.evidence]].map(([label, value]) => '<div class="logic-item"><strong>' + cleanText(label) + '</strong><small>' + cleanText(String(value)) + '</small></div>').join('');
+		};
+		document.getElementById('refreshLogicButton').addEventListener('click', renderLogicEngine);
+		document.getElementById('buildLogicPlanButton').addEventListener('click', async () => {
+			const analysis = buildLogicAnalysis();
+			if (!analysis.plan.length) { document.getElementById('logicMessage').textContent = 'Add an unfinished topic or error first.'; return; }
+			const button = document.getElementById('buildLogicPlanButton');
+			button.disabled = true;
+			try {
+				for (const item of analysis.plan) {
+					if (item.sourceType === 'session') continue;
+					const data = await saveRecord('study_sessions', { title:item.title, topic:item.source.topic || item.source.name || '', duration_minutes:item.priority === 'HIGH' ? 25 : 35, priority:item.priority, status:'PLANNED', goal:item.detail });
+					addPlanItem(item.title, item.detail, item.priority, 'study_sessions', data.id);
+					consumeLogicSource(item.sourceType, item.source);
+				}
+				document.getElementById('logicMessage').textContent = analysis.plan.some((item) => item.sourceType !== 'session') ? 'Logic plan saved.' : 'Complete the existing session, then record the result.';
+				renderLogicEngine();
+			} catch (error) { document.getElementById('logicMessage').textContent = 'Unable to save the logic plan.'; }
+			button.disabled = false;
+		});
+		const performanceStorageKey = () => 'pacs-performance-' + (currentUserId() || 'guest');
+		const defaultPerformanceProfile = () => ({ problem:'Procrastination', evidence:'No evidence captured yet. Start with the friction you notice most often.', nextAction:'Start your next subject for 5 minutes', successCondition:'Continue if momentum develops; otherwise record the blocker.', history:[] });
+		const readPerformanceProfile = () => { try { return { ...defaultPerformanceProfile(), ...(JSON.parse(localStorage.getItem(performanceStorageKey())) || {}) }; } catch (error) { return defaultPerformanceProfile(); } };
+		const writePerformanceProfile = (profile) => localStorage.setItem(performanceStorageKey(), JSON.stringify(profile));
+		const renderPerformanceProfile = () => {
+			const profile = readPerformanceProfile();
+			const protocol = performanceProtocols[profile.problem] || performanceProtocols.Procrastination;
+			document.getElementById('performanceBottleneck').textContent = profile.problem;
+			document.getElementById('performanceEvidence').textContent = profile.evidence;
+			document.getElementById('performanceIntervention').textContent = protocol[0];
+			document.getElementById('performanceNextAction').textContent = profile.nextAction;
+			document.getElementById('performanceProtocol').textContent = protocol[1];
+			document.getElementById('performanceProblem').value = profile.problem;
+			document.getElementById('performanceEvidenceInput').value = profile.evidence === defaultPerformanceProfile().evidence ? '' : profile.evidence;
+			document.getElementById('performanceNextActionInput').value = profile.nextAction;
+			document.getElementById('performanceSuccessInput').value = profile.successCondition;
+			const history = document.getElementById('performanceHistory');
+			history.innerHTML = profile.history.length ? profile.history.slice().reverse().map((entry) => '<div class="intervention-item"><div><strong>' + cleanText(entry.problem) + '</strong><small>' + cleanText(entry.date) + ' - ' + cleanText(entry.result) + '</small></div><span class="result-badge' + (entry.result === 'Started - result not logged' ? ' pending' : '') + '">' + (entry.result === 'Started - result not logged' ? 'PENDING' : 'LOGGED') + '</span></div>').join('') : '<p>No interventions measured yet.</p>';
+			document.getElementById('performanceApplyButton').textContent = profile.history.some((entry) => entry.result === 'Started - result not logged') ? 'LOG LATEST RESULT' : 'START INTERVENTION';
+		};
+		document.getElementById('performanceForm').addEventListener('submit', (event) => {
+			event.preventDefault();
+			const profile = readPerformanceProfile();
+			profile.problem = document.getElementById('performanceProblem').value;
+			profile.evidence = document.getElementById('performanceEvidenceInput').value.trim() || 'No evidence captured yet. Start with the friction you notice most often.';
+			profile.nextAction = document.getElementById('performanceNextActionInput').value.trim() || 'Start the smallest executable step.';
+			profile.successCondition = document.getElementById('performanceSuccessInput').value.trim() || 'Record what happened after the intervention.';
+			writePerformanceProfile(profile);
+			document.getElementById('performanceMessage').textContent = 'Profile updated. Test this intervention in your next session.';
+			renderPerformanceProfile();
+		});
+		document.getElementById('performanceApplyButton').addEventListener('click', () => {
+			const profile = readPerformanceProfile();
+			const pending = profile.history.find((entry) => entry.result === 'Started - result not logged');
+			if (pending) {
+				const result = window.prompt('What happened after the intervention?', 'Started, but the blocker remained: ');
+				if (result === null) return;
+				pending.result = result.trim() || 'Completed, result unclear';
+			} else profile.history.push({ problem:profile.problem, date:new Intl.DateTimeFormat(undefined, { dateStyle:'medium' }).format(new Date()), result:'Started - result not logged' });
+			writePerformanceProfile(profile);
+			renderPerformanceProfile();
+		});
+		document.getElementById('performanceResetButton').addEventListener('click', () => {
+			if (!window.confirm('Reset this performance profile and its intervention history?')) return;
+			localStorage.removeItem(performanceStorageKey());
+			renderPerformanceProfile();
+		});
+		const rowLabel = (row) => row.name || row.title || row.label || row.topic || row.subject || row.content || '';
+		const rowDetail = (row) => row.detail || row.description || row.notes || row.content || (row.target_at ? new Intl.DateTimeFormat(undefined, { dateStyle:'medium', timeStyle:'short' }).format(new Date(row.target_at)) : '');
+		const rowStatus = (row) => row.status || 'SAVED';
+		const recordRequests = {
+			'+ ADD ASSESSMENT': { table:'assessments', page:'dashboard', title:'Add assessment', fields:[['name','Assessment name','text',true],['subject_id','Subject ID','text',false],['assessment_date','Date','date',true],['start_time','Start time','time',false],['duration_minutes','Duration (minutes)','number',false],['location','Location','text',false],['syllabus_scope','Syllabus scope','textarea',false],['target_score','Target score','number',false]] },
+			'+ NEW SESSION': { table:'study_sessions', page:'study', title:'New study session', fields:[['title','Session title','text',true],['topic','Topic','text',false],['scheduled_at','Date and time','datetime-local',false],['duration_minutes','Duration (minutes)','number',true],['priority','Priority','select',false,['LOW','MEDIUM','HIGH']],['goal','Goal','text',false],['notes','Notes','textarea',false]] },
+			'+ NEW COUNTDOWN': { table:'countdowns', page:'countdown', title:'New countdown', fields:[['title','What are you counting down to?','text',true],['event_type','Type','select',true,['EXAM','TEST','PROJECT','STUDY MILESTONE','OTHER']],['years','Years from now','number',false],['months','Months from now','number',false],['weeks','Weeks from now','number',false],['days','Days from now','number',false],['hours','Hours from now','number',false],['notes','Notes','textarea',false]] },
+			'+ ADD TOPIC': { table:'curriculum_topics', page:'curriculum', title:'Add curriculum topic', fields:[['name','Topic name','text',true],['unit','Unit','text',false],['subtopic','Subtopic','text',false],['status','Status','select',false,['NOT_STARTED','LEARNING','PRACTICING','MASTERED']],['confidence','Confidence (%)','number',false]] },
+			'+ ADD PAPER': { table:'past_papers', page:'papers', title:'Add past paper', fields:[['title','Paper title','text',true],['subject_id','Subject ID','text',false],['year','Year','number',false],['examination','Examination','text',false],['source','Source','text',false],['duration_minutes','Duration (minutes)','number',false],['total_marks','Total marks','number',false]] },
+			'+ LOG ERROR': { table:'error_bank', page:'errors', title:'Log error', fields:[['mistake','Mistake','textarea',true],['topic','Topic','text',false],['cause','Cause','text',false],['correct_method','Correct method','textarea',false],['severity','Severity','select',false,['LOW','MEDIUM','HIGH']],['status','Status','select',false,['OPEN','PRACTICING','VERIFIED','RESOLVED']]] },
+			'+ SAVE RESOURCE': { table:'research_resources', page:'research', title:'Save research resource', fields:[['title','Title','text',true],['author','Author','text',false],['source','Source','text',false],['url','URL','url',false],['topic','Topic','text',false],['type','Type','select',false,['BOOK','PAPER','ARTICLE','WEBSITE','VIDEO','DOCUMENT','DATASET','OTHER']],['source_facts','Source facts','textarea',false],['user_notes','Your notes','textarea',false]] }
+		};
+		const openRecordForm = (request) => {
+			document.getElementById('recordTitle').textContent = request.title;
+			document.getElementById('recordDescription').textContent = 'The record will be saved to your Supabase account.';
+			document.getElementById('recordMessage').textContent = '';
+			document.getElementById('recordFields').innerHTML = request.fields.map(([name, label, type, required, options]) => {
+				const control = type === 'textarea' ? '<textarea id="record-' + name + '" ' + (required ? 'required' : '') + '></textarea>' : type === 'select' ? '<select id="record-' + name + '">' + options.map((option) => '<option>' + option + '</option>').join('') + '</select>' : '<input id="record-' + name + '" type="' + type + '" ' + (required ? 'required' : '') + '>';
+				return '<div class="form-field' + (type === 'textarea' ? ' full' : '') + '"><label for="record-' + name + '">' + label + '</label>' + control + '</div>';
+			}).join('');
+			recordForm.dataset.table = request.table;
+			recordForm.dataset.page = request.page;
+			recordForm.dataset.fields = JSON.stringify(request.fields.map((field) => field[0]));
+			recordModal.style.display = 'grid';
+			document.querySelector('#recordFields input, #recordFields textarea, #recordFields select').focus();
+			if (request.table === 'study_sessions') document.getElementById('record-duration_minutes').value = readSettings().defaultDuration;
+		};
+		document.querySelectorAll('.page-actions .btn').forEach((button) => button.addEventListener('click', () => {
+			const request = recordRequests[button.textContent.trim()];
+			if (request) openRecordForm(request);
+		}));
+		document.getElementById('addAssessmentButton').addEventListener('click', () => openRecordForm(recordRequests['+ ADD ASSESSMENT']));
+		document.getElementById('cancelRecord').addEventListener('click', () => { recordModal.style.display = 'none'; });
+		recordForm.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const values = {};
+			JSON.parse(recordForm.dataset.fields).forEach((name) => { const value = document.getElementById('record-' + name).value.trim(); if (value && recordForm.dataset.table !== 'countdowns') values[name] = ['year','duration_minutes','total_marks','confidence'].includes(name) ? Number(value) : value; });
+			if (recordForm.dataset.table === 'countdowns') {
+				['title', 'event_type', 'notes'].forEach((name) => {
+					const value = document.getElementById('record-' + name).value.trim();
+					if (value) values[name] = value;
+				});
+				const addYears = Number(document.getElementById('record-years').value) || 0;
+				const addMonths = Number(document.getElementById('record-months').value) || 0;
+				const addWeeks = Number(document.getElementById('record-weeks').value) || 0;
+				const addDays = Number(document.getElementById('record-days').value) || 0;
+				const addHours = Number(document.getElementById('record-hours').value) || 0;
+				const target = new Date();
+				target.setFullYear(target.getFullYear() + addYears);
+				target.setMonth(target.getMonth() + addMonths);
+				target.setDate(target.getDate() + (addWeeks * 7) + addDays);
+				target.setHours(target.getHours() + addHours);
+				values.target_at = target.toISOString();
+			}
+			try {
+				const data = await saveRecord(recordForm.dataset.table, values);
+				const view = document.querySelector('[data-view="' + recordForm.dataset.page + '"]');
+				if (view) addListItem(view.querySelector('.view-grid'), rowLabel(data), rowDetail(data), rowStatus(data), recordForm.dataset.table, data.id);
+				if (recordForm.dataset.table === 'assessments') await loadNextAssessment();
+				if (recordForm.dataset.table === 'countdowns') await loadNextCountdown();
+				await logActivity('created record', recordForm.dataset.table, data.id);
+				recordModal.style.display = 'none';
+				setSyncStatus('Saved to Supabase.', true);
+				showToast('Saved successfully.');
+			} catch (error) {
+				document.getElementById('recordMessage').textContent = 'Unable to save. Check the form and your connection, then try again.';
+			}
+		});
+		const exportData = async (format) => {
+			const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[character]);
+			const tables = ['captures', 'study_sessions', 'countdowns', 'curriculum_topics', 'past_papers', 'error_bank', 'research_resources'];
+			const results = await Promise.all(tables.map((table) => requireSupabase().from(table).select('*').order('created_at', { ascending:false })));
+			const failedResult = results.find((result) => result.error);
+			if (failedResult) throw failedResult.error;
+			const sections = results.map((result, index) => '<section><h2>' + tables[index].replaceAll('_', ' ') + '</h2>' + ((result.data || []).map((item) => '<pre>' + escapeHtml(JSON.stringify(item, null, 2)) + '</pre>').join('') || '<p>No records saved.</p>') + '</section>').join('');
+			const content = '<!doctype html><html><head><meta charset="utf-8"><title>Vanguard One Export</title><style>body{font-family:Arial,sans-serif;color:#18211f;max-width:760px;margin:40px auto;padding:0 20px}h1{border-bottom:2px solid #0b5149;padding-bottom:12px}section{border-bottom:1px solid #dfe6df;padding:18px 0}h2{font-size:18px;margin:0 0 10px;text-transform:capitalize}p{color:#71807a;font-size:13px}pre{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0}</style></head><body><h1>Vanguard One Academic Export</h1><p>Generated ' + escapeHtml(new Date().toLocaleString()) + '</p>' + sections + '</body></html>';
+			if (format === 'pdf') {
+				const printWindow = window.open('', '_blank');
+				if (!printWindow) throw new Error('Popup blocked');
+				printWindow.document.write(content);
+				printWindow.document.close();
+				printWindow.focus();
+				printWindow.addEventListener('load', () => printWindow.print(), { once:true });
+				return;
+			}
+			const link = document.createElement('a');
+			link.href = URL.createObjectURL(new Blob([content], { type:'text/html' }));
+			link.download = 'vanguard-one.html';
+			link.click();
+			URL.revokeObjectURL(link.href);
+		};
+		document.getElementById('exportHtmlButton').addEventListener('click', () => exportData('html').catch(() => showToast('Unable to export HTML. Check your connection and try again.', true)));
+		document.getElementById('exportPdfButton').addEventListener('click', () => exportData('pdf').catch(() => showToast('Unable to prepare the PDF. Allow pop-ups and try again.', true)));
+		const loadCaptures = async () => {
+			try {
+				const { data: captures, error } = await requireSupabase().from('captures').select('id, label, detail').order('created_at', { ascending: false });
+				if (error) throw error;
+				cacheRows('captures', captures);
+				captures.forEach((capture) => addPlanItem(capture.label, capture.detail, 'CAPTURE', 'captures', capture.id));
+			} catch (error) {
+				setSyncStatus('Unable to sync captures.', false);
+				readOffline('captures').forEach((capture) => addPlanItem(capture.label, capture.detail, 'CAPTURE', 'captures', capture.id));
+			}
+		};
+		const loadRows = async (table, targetId, addToPlan = false) => {
+			try {
+				const { data: rows, error } = await requireSupabase().from(table).select('*');
+				if (error) throw error;
+				cacheRows(table, rows);
+				const target = document.getElementById(targetId);
+				rows.forEach((row) => {
+					const label = rowLabel(row);
+					const detail = rowDetail(row);
+					if (addToPlan) addPlanItem(label, detail, rowStatus(row), table, row.id);
+					addListItem(target, label, detail, rowStatus(row), table, row.id);
+				});
+			} catch (error) {
+				showToast('Unable to load data. Check your connection and try again.', true);
+				const target = document.getElementById(targetId);
+				readOffline(table).forEach((row) => {
+					if (addToPlan) addPlanItem(rowLabel(row), rowDetail(row), rowStatus(row), table, row.id);
+					addListItem(target, rowLabel(row), rowDetail(row), rowStatus(row), table, row.id);
+				});
+			}
+		};
+		const renderStats = async () => {
+			try {
+				const client = requireSupabase();
+				const now = new Date();
+				const dayOffset = readSettings().weekStartsOn === 'sunday' ? now.getDay() : (now.getDay() + 6) % 7;
+				const weekStart = new Date(now);
+				weekStart.setDate(now.getDate() - dayOffset);
+				weekStart.setHours(0, 0, 0, 0);
+				const results = await Promise.all([
+					client.from('study_sessions').select('duration_minutes').eq('status', 'COMPLETED'),
+					client.from('study_sessions').select('id').eq('status', 'COMPLETED').gte('completed_at', weekStart.toISOString()),
+					client.from('curriculum_topics').select('status'),
+					client.from('error_bank').select('status').neq('status', 'RESOLVED'),
+					client.from('paper_attempts').select('percentage')
+				]);
+				const failedResult = results.find((result) => result.error);
+				if (failedResult) throw failedResult.error;
+				const [sessions, completed, topics, errors, papers] = results;
+				const values = [
+					['Study time', (sessions.data || []).reduce((total, row) => total + (row.duration_minutes || 0), 0) + ' min'],
+					['Sessions this week', (completed.data || []).length],
+					['Curriculum coverage', (topics.data || []).length ? Math.round((topics.data.filter((row) => row.status === 'MASTERED').length / topics.data.length) * 100) + '%' : '0%'],
+					['Open errors', (errors.data || []).length],
+					['Average paper score', (papers.data || []).length ? Math.round(papers.data.reduce((total, row) => total + (row.percentage || 0), 0) / papers.data.length) + '%' : '—']
+				];
+				document.getElementById('stats').innerHTML = values.map(([label, value]) => '<div class="stat"><span class="label">' + label + '</span><strong>' + value + '</strong></div>').join('');
+			} catch (error) {
+				showToast('Dashboard metrics are temporarily unavailable.', true);
+			}
+		};
+		const loadNextAssessment = async () => {
+			try {
+				const { data, error } = await requireSupabase().from('assessments').select('id, name, assessment_date').eq('status', 'UPCOMING').gte('assessment_date', new Date().toISOString().slice(0, 10)).order('assessment_date').limit(1).maybeSingle();
+				if (error) throw error;
+				if (!data) {
+					document.getElementById('assessmentCount').textContent = '—';
+					document.getElementById('assessmentLabel').textContent = 'No countdown added';
+					document.getElementById('assessmentName').textContent = 'Add an exam, test, or study milestone.';
+					document.getElementById('deleteCountdownButton').hidden = true;
+					return;
+				}
+				const days = Math.max(0, Math.ceil((new Date(data.assessment_date + 'T00:00:00') - new Date()) / 86400000));
+				document.getElementById('assessmentCount').textContent = days;
+				document.getElementById('assessmentLabel').textContent = days === 1 ? 'day until assessment' : 'days until assessment';
+				document.getElementById('assessmentName').textContent = data.name;
+				const deleteButton = document.getElementById('deleteCountdownButton');
+				deleteButton.dataset.deleteTable = 'assessments';
+				deleteButton.dataset.deleteId = data.id;
+				deleteButton.hidden = false;
+			} catch (error) {
+				showToast('Unable to load assessments.', true);
+			}
+		};
+		const loadNextCountdown = async () => {
+			try {
+				const { data, error } = await requireSupabase().from('countdowns').select('id, title, event_type, target_at').not('target_at', 'is', null).gte('target_at', new Date().toISOString()).order('target_at').limit(1).maybeSingle();
+				if (error) throw error;
+				const deleteButton = document.getElementById('deleteCountdownButton');
+				if (!data) { await loadNextAssessment(); return; }
+				const hours = Math.max(0, Math.ceil((new Date(data.target_at) - new Date()) / 3600000));
+				document.getElementById('assessmentCount').textContent = hours;
+				document.getElementById('assessmentLabel').textContent = hours === 1 ? 'hour until ' + data.event_type.toLowerCase() : 'hours until ' + data.event_type.toLowerCase();
+				document.getElementById('assessmentName').textContent = data.title;
+				deleteButton.dataset.deleteTable = 'countdowns';
+				deleteButton.dataset.deleteId = data.id;
+				deleteButton.hidden = false;
+			} catch (error) {
+				if (!String(error.message || error).includes('countdowns')) showToast('Unable to load countdowns.', true);
+			}
+		};
+		const signOut = () => {
+			currentSession = null;
+			capturesLoaded = false;
+			authView.style.display = 'grid';
+			appShell.classList.remove('authenticated');
+		};
+		const bootAuth = async () => {
+			try {
+				const { data: { session }, error } = await requireSupabase().auth.getSession();
+				if (error) throw error;
+				if (session) await showAuthenticatedApp(session);
+			} catch (error) {
+				setAuthMessage('Unable to restore your session. Please sign in again.');
+			}
+		};
+		if (supabaseClient) {
+			supabaseClient.auth.onAuthStateChange((event, session) => {
+				if (session) {
+					window.setTimeout(() => showAuthenticatedApp(session), 0);
+				} else if (event === 'SIGNED_OUT') signOut();
+			});
+			bootAuth();
+		}
+		document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeModal(); recordModal.style.display = 'none'; profileModal.style.display = 'none'; } });
+		recordModal.addEventListener('click', (event) => { if (event.target === recordModal) recordModal.style.display = 'none'; });
+		profileModal.addEventListener('click', (event) => { if (event.target === profileModal) profileModal.style.display = 'none'; });
+	</script>
+</body>
+</html>
