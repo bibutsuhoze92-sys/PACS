@@ -34,8 +34,6 @@
 		.eyebrow { color:var(--teal); letter-spacing:2px; text-transform:uppercase; font-size:10px; font-weight:800; }
 		h1 { font-family:Georgia, serif; font-weight:400; font-size:clamp(31px, 4vw, 48px); letter-spacing:-1.5px; margin:8px 0 0; }
 		.top-actions { display:flex; align-items:center; gap:12px; }
-		.install-button { display:none; border:1px solid var(--line); background:var(--panel); color:var(--teal); border-radius:7px; padding:10px 12px; font-size:11px; font-weight:bold; }
-		.install-button.visible { display:block; }
 		.date { color:var(--muted); font-size:12px; }
 		.avatar { width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:50%; background:var(--coral); font-weight:bold; }
 		.avatar:hover, .avatar:focus-visible { outline:3px solid var(--lime); outline-offset:2px; }
@@ -250,7 +248,7 @@
 			<button class="nav-item" id="signOutButton" type="button"><span>↪</span>Sign out</button>
 		</aside>
 		<main>
-			<header class="topbar" id="topbar"><div><div class="eyebrow" id="currentDate"></div><h1 id="pageTitle">Command center</h1></div><div class="top-actions"><span class="date" id="syncStatus"></span><button class="install-button" id="installButton" type="button">DOWNLOAD APP</button><button class="avatar" id="userAvatar" type="button" aria-label="Open profile">U</button></div></header>
+			<header class="topbar" id="topbar"><div><div class="eyebrow" id="currentDate"></div><h1 id="pageTitle">Command center</h1></div><div class="top-actions"><span class="date" id="syncStatus"></span><button class="avatar" id="userAvatar" type="button" aria-label="Open profile">U</button></div></header>
 			<section class="hero-grid">
 				<div class="hero"><div class="eyebrow">Your next best move</div><h2>Cook a plan that earns marks.</h2><p>Use your captured work to build a focused academic plan.</p><button class="btn" id="cookButton">✦ &nbsp; COOK MY PLAN</button></div>
 				<div class="countdown"><div class="eyebrow">Next big moment</div><div class="count-number" id="assessmentCount">—</div><p id="assessmentLabel">No countdown added</p><p id="assessmentName">Add an exam, test, or study milestone.</p><button class="btn" id="addAssessmentButton" type="button">+ ADD ASSESSMENT</button><button class="delete-button" id="deleteCountdownButton" type="button" hidden>DELETE COUNTDOWN</button></div>
@@ -292,26 +290,7 @@
 		const authMessage = document.getElementById('authMessage');
 		const userAvatar = document.getElementById('userAvatar');
 		const syncStatus = document.getElementById('syncStatus');
-		const installButton = document.getElementById('installButton');
 		const toast = document.getElementById('toast');
-		let deferredInstallPrompt = null;
-		const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-		if (!isInstalled) installButton.classList.add('visible');
-		window.addEventListener('beforeinstallprompt', (event) => {
-			event.preventDefault();
-			deferredInstallPrompt = event;
-			installButton.classList.add('visible');
-		});
-		installButton.addEventListener('click', async () => {
-			if (!deferredInstallPrompt) {
-				showToast('Open your browser menu and choose Install app or Add to Home Screen.');
-				return;
-			}
-			deferredInstallPrompt.prompt();
-			await deferredInstallPrompt.userChoice;
-			deferredInstallPrompt = null;
-			installButton.classList.remove('visible');
-		});
 		const darkModeToggle = document.getElementById('darkModeToggle');
 		const recordModal = document.getElementById('recordModal');
 		const recordForm = document.getElementById('recordForm');
