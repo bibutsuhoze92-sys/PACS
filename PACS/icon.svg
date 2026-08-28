@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+	<title id="title">Vanguard One</title>
+	<desc id="desc">A lime V1 mark on a teal background.</desc>
+	<rect width="512" height="512" rx="112" fill="#0b5149"/>
+	<path d="M104 120h82l70 183 70-183h82L285 392h-58z" fill="#c8f169"/>
+	<path d="M256 120h72l-31 82h-72z" fill="#f4f6f1" opacity=".9"/>
+</svg>

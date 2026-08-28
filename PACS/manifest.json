@@ -1,0 +1,21 @@
+{
+  "name": "Vanguard One | Academic Command System",
+  "short_name": "Vanguard One",
+  "description": "A focused academic planning and performance command system.",
+  "start_url": "./index.html",
+  "id": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f1",
+  "theme_color": "#0b5149",
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
