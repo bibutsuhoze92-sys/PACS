@@ -192,6 +192,9 @@
 		.form-field textarea { min-height:80px; resize:vertical; }
 		.toast { position:fixed; right:20px; bottom:20px; z-index:4; padding:12px 15px; border-radius:7px; color:white; background:var(--ink); font-size:12px; box-shadow:0 8px 24px rgba(0,0,0,.18); }
 		.toast.error { background:#b35745; }
+		.backend-banner { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0 0 20px; padding:12px 15px; border:1px solid #f0c9bf; border-radius:8px; color:#8d4032; background:#fff8f5; font-size:12px; }
+		.backend-banner p { margin:0; }
+		.backend-banner .btn { flex:none; padding:8px 11px; color:#8d4032; background:#fff0eb; }
 		[hidden] { display:none !important; }
 		@media (max-width:520px) { .form-grid, .profile-grid { grid-template-columns:1fr; } .form-field.full { grid-column:auto; } .toast { left:16px; right:16px; bottom:16px; } }
 		#appShell { display:none; }
@@ -202,6 +205,7 @@
 	</style>
 </head>
 <body>
+	<div class="backend-banner" id="backendBanner" hidden role="alert"><p><strong>Backend temporarily unavailable.</strong> Your saved local preferences and offline changes remain available.</p><button class="btn" id="retryBackendButton" type="button">TRY AGAIN</button></div>
 	<section id="authView" aria-label="Sign in">
 		<form class="auth-card" id="authForm">
 			<div class="auth-mark">V1</div>
@@ -271,10 +275,18 @@
 	<script>
 		const supabaseUrl = window.PACS_SUPABASE_URL || 'https://kuwnmdxsntaqyhohyaqp.supabase.co';
 		const supabaseAnonKey = window.PACS_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1d25tZHhzbnRhcXlob2h5YXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzg1NTgsImV4cCI6MjEwMjgxNDU1OH0.fKhCpMwRaeHai86lRgJ2RAWoAuq29YQwpsGsSs_Q6FY';
-		const supabaseClient = supabaseUrl && supabaseAnonKey ? window.supabase.createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+		let supabaseClient = null;
+		const createSupabaseClient = () => {
+			if (!supabaseUrl || !supabaseAnonKey || !window.supabase?.createClient) return null;
+			try { return window.supabase.createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }); } catch (error) { return null; }
+		};
+		supabaseClient = createSupabaseClient();
 		if ('serviceWorker' in navigator && window.location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+		const backendBanner = document.getElementById('backendBanner');
+		const markBackendUnavailable = () => { backendBanner.hidden = false; };
+		const markBackendAvailable = () => { backendBanner.hidden = true; };
 		const requireSupabase = () => {
-			if (!supabaseClient) throw new Error('Set PACS_SUPABASE_URL and PACS_SUPABASE_ANON_KEY before using PACS data actions.');
+			if (!supabaseClient) { markBackendUnavailable(); throw new Error('Supabase is temporarily unavailable.'); }
 			return supabaseClient;
 		};
 		const authView = document.getElementById('authView');
@@ -368,6 +380,7 @@
 			syncStatus.textContent = message;
 			syncStatus.style.color = isSuccess ? '#568b42' : '#b35745';
 		};
+		const reportBackendError = (error) => { if (!navigator.onLine || /fetch|network|offline|failed|supabase|temporarily unavailable/i.test(String(error?.message || error))) markBackendUnavailable(); };
 		const showToast = (message, isError = false) => {
 			toast.textContent = message;
 			toast.classList.toggle('error', isError);
@@ -506,7 +519,7 @@
 		document.getElementById('saveCapture').addEventListener('click', async () => {
 			const label = document.getElementById('captureLabel').value.trim() || 'Unsorted capture';
 			try {
-				const data = await saveRecord('captures', { label: cleanText(label), content: captureText.value.trim(), category: captureCategory, detail: 'Captured and ready for review' });
+				const data = await saveRecord('captures', { label: cleanText(label), detail: captureText.value.trim() || 'Captured and ready for review' });
 				addPlanItem(label, 'Captured and ready for review', captureCategory, 'captures', data.id);
 				await logActivity('created record', 'captures');
 				setSyncStatus('Saved to Supabase.', true);
@@ -514,7 +527,7 @@
 				document.getElementById('captureLabel').value = '';
 				closeModal();
 			} catch (error) {
-				showToast('Unable to save capture. Check your connection and try again.', true);
+				showToast('Unable to save capture: ' + (error.message || 'Check your connection and try again.'), true);
 			}
 		});
 		document.getElementById('cookButton').addEventListener('click', async (event) => {
@@ -779,7 +792,7 @@
 				setSyncStatus('Saved to Supabase.', true);
 				showToast('Saved successfully.');
 			} catch (error) {
-				document.getElementById('recordMessage').textContent = 'Unable to save. Check the form and your connection, then try again.';
+				document.getElementById('recordMessage').textContent = 'Unable to save: ' + (error.message || 'Check the form and your connection, then try again.');
 			}
 		});
 		const exportData = async (format) => {
@@ -921,9 +934,20 @@
 				if (error) throw error;
 				if (session) await showAuthenticatedApp(session);
 			} catch (error) {
+				reportBackendError(error);
 				setAuthMessage('Unable to restore your session. Please sign in again.');
 			}
 		};
+		document.getElementById('retryBackendButton').addEventListener('click', async (event) => {
+			event.currentTarget.disabled = true;
+			if (!supabaseClient && !window.supabase) await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; script.onload = resolve; script.onerror = resolve; document.head.appendChild(script); });
+			supabaseClient = createSupabaseClient();
+			if (supabaseClient) { markBackendAvailable(); supabaseClient.auth.onAuthStateChange((authEvent, session) => { if (session) window.setTimeout(() => showAuthenticatedApp(session), 0); else if (authEvent === 'SIGNED_OUT') signOut(); }); await bootAuth(); }
+			else markBackendUnavailable();
+			event.currentTarget.disabled = false;
+		});
+		window.addEventListener('offline', markBackendUnavailable);
+		window.addEventListener('online', () => { if (supabaseClient) syncOfflineQueue(); else document.getElementById('retryBackendButton').click(); });
 		if (supabaseClient) {
 			supabaseClient.auth.onAuthStateChange((event, session) => {
 				if (session) {

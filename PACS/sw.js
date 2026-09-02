@@ -1,5 +1,5 @@
-const CACHE_NAME = 'vanguard-one-shell-v3';
-const APP_SHELL = ['index.html', 'manifest.json', 'icon.svg', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'];
+const CACHE_NAME = 'vanguard-one-shell-v4';
+const APP_SHELL = ['index.html', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (event) => {
 	 event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
@@ -14,7 +14,7 @@ self.addEventListener('fetch', (event) => {
 	 const requestUrl = new URL(event.request.url);
 	 const isAppShell = event.request.mode === 'navigate';
 	 const isLibrary = requestUrl.hostname === 'cdn.jsdelivr.net';
-	 if (!isAppShell && !isLibrary) return;
+	 if (!isAppShell && !isLibrary && requestUrl.origin !== self.location.origin) return;
 	 if (isAppShell) {
 		 event.respondWith(fetch(event.request).then((response) => {
 			 const copy = response.clone();

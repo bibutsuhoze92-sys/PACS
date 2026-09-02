@@ -13,13 +13,16 @@ window.PACS_SUPABASE_URL = 'https://your-project.supabase.co';
 window.PACS_SUPABASE_ANON_KEY = 'your-anon-key';
 ```
 
-The page uses the Supabase JavaScript client and expects these tables:
+The page uses the Supabase JavaScript client and expects these core tables:
 
-- `captures`: `label`, `content`, `detail`, `created_at`
-- `study`: `name`, `detail`, `status`, `created_at`
-- `curriculum`: `name`, `detail`, `status`, `created_at`
-- `papers`: `name`, `detail`, `status`, `created_at`
-- `errors`: `name`, `detail`, `status`, `created_at`
-- `research`: `name`, `detail`, `status`, `created_at`
+- `captures`: `label`, `detail`, `created_at`
+- `study_sessions`: `title`, `topic`, `goal`, `duration_minutes`, `status`, `created_at`
+- `countdowns`: `title`, `event_type`, `target_at`, `notes`, `created_at`
+- `curriculum_topics`: `name`, `unit`, `subtopic`, `status`, `confidence`, `created_at`
+- `past_papers`: `title`, `subject_id`, `year`, `examination`, `duration_minutes`, `total_marks`, `created_at`
+- `error_bank`: `mistake`, `topic`, `cause`, `correct_method`, `severity`, `status`, `created_at`
+- `research_resources`: `title`, `author`, `source`, `url`, `topic`, `type`, `created_at`
 
-Configure Supabase Row Level Security policies for the signed-in users or service role that should read and write this data. The page uses the public anon key and does not contain a service-role key.
+The app also reads optional helper tables for analytics and profile features: `assessments`, `paper_attempts`, `profiles`, and `activity_log`.
+
+Older single-word table names such as `study`, `curriculum`, `papers`, `errors`, and `research` are still accepted as legacy fallbacks when a project was created with the earlier schema. Configure Supabase Row Level Security policies for the signed-in users or service role that should read and write this data. The page uses the public anon key and does not contain a service-role key.

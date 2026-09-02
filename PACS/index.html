@@ -199,6 +199,9 @@
 		.form-field textarea { min-height:80px; resize:vertical; }
 		.toast { position:fixed; right:20px; bottom:20px; z-index:4; padding:12px 15px; border-radius:7px; color:white; background:var(--ink); font-size:12px; box-shadow:0 8px 24px rgba(0,0,0,.18); }
 		.toast.error { background:#b35745; }
+		.backend-banner { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0 0 20px; padding:12px 15px; border:1px solid #f0c9bf; border-radius:8px; color:#8d4032; background:#fff8f5; font-size:12px; }
+		.backend-banner p { margin:0; }
+		.backend-banner .btn { flex:none; padding:8px 11px; color:#8d4032; background:#fff0eb; }
 		[hidden] { display:none !important; }
 		@media (max-width:520px) { .form-grid, .profile-grid { grid-template-columns:1fr; } .form-field.full { grid-column:auto; } .toast { left:16px; right:16px; bottom:16px; } }
 		#appShell { display:none; }
@@ -209,6 +212,7 @@
 	</style>
 </head>
 <body>
+	<div class="backend-banner" id="backendBanner" hidden role="alert"><p><strong>Backend temporarily unavailable.</strong> Your saved local preferences and offline changes remain available.</p><button class="btn" id="retryBackendButton" type="button">TRY AGAIN</button></div>
 	<section id="authView" aria-label="Sign in">
 		<form class="auth-card" id="authForm">
 			<img class="auth-mark" src="./icon.svg" alt="Vanguard One logo">
@@ -278,10 +282,18 @@
 	<script>
 		const supabaseUrl = window.PACS_SUPABASE_URL || 'https://kuwnmdxsntaqyhohyaqp.supabase.co';
 		const supabaseAnonKey = window.PACS_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1d25tZHhzbnRhcXlob2h5YXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzg1NTgsImV4cCI6MjEwMjgxNDU1OH0.fKhCpMwRaeHai86lRgJ2RAWoAuq29YQwpsGsSs_Q6FY';
-		const supabaseClient = supabaseUrl && supabaseAnonKey ? window.supabase.createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+		let supabaseClient = null;
+		const createSupabaseClient = () => {
+			if (!supabaseUrl || !supabaseAnonKey || !window.supabase?.createClient) return null;
+			try { return window.supabase.createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }); } catch (error) { return null; }
+		};
+		supabaseClient = createSupabaseClient();
 		if ('serviceWorker' in navigator && window.location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+		const backendBanner = document.getElementById('backendBanner');
+		const markBackendUnavailable = () => { backendBanner.hidden = false; };
+		const markBackendAvailable = () => { backendBanner.hidden = true; };
 		const requireSupabase = () => {
-			if (!supabaseClient) throw new Error('Set PACS_SUPABASE_URL and PACS_SUPABASE_ANON_KEY before using PACS data actions.');
+			if (!supabaseClient) { markBackendUnavailable(); throw new Error('Supabase is temporarily unavailable.'); }
 			return supabaseClient;
 		};
 		const authView = document.getElementById('authView');
@@ -375,6 +387,7 @@
 			syncStatus.textContent = message;
 			syncStatus.style.color = isSuccess ? '#568b42' : '#b35745';
 		};
+		const reportBackendError = (error) => { if (!navigator.onLine || /fetch|network|offline|failed|supabase|temporarily unavailable/i.test(String(error?.message || error))) markBackendUnavailable(); };
 		const showToast = (message, isError = false) => {
 			toast.textContent = message;
 			toast.classList.toggle('error', isError);
@@ -434,6 +447,43 @@
 		const logActivity = (action, tableName, recordId = null) => {
 			if (!currentUserId()) return Promise.resolve(false);
 			return requireSupabase().from('activity_log').insert({ user_id: currentUserId(), action, table_name: tableName, record_id: recordId }).then(({ error }) => !error).catch(() => false);
+		};
+		const isMissingTableError = (error) => {
+			const message = String(error?.message || error || '');
+			return /does not exist|relation .* does not exist|table .* does not exist|not found/i.test(message);
+		};
+		const tableAliases = {
+			captures: ['captures'],
+			study_sessions: ['study_sessions', 'study'],
+			countdowns: ['countdowns'],
+			curriculum_topics: ['curriculum_topics', 'curriculum'],
+			past_papers: ['past_papers', 'papers'],
+			error_bank: ['error_bank', 'errors'],
+			research_resources: ['research_resources', 'research'],
+			assessments: ['assessments'],
+			paper_attempts: ['paper_attempts']
+		};
+		const runQueryWithFallbacks = async (table, query, fallbacks = []) => {
+			const candidates = [...new Set([table, ...fallbacks])];
+			let lastError = null;
+			for (const candidate of candidates) {
+				try {
+					const result = await query(candidate);
+					if (!result.error) return result;
+					if (isMissingTableError(result.error)) {
+						lastError = result.error;
+						continue;
+					}
+					return result;
+				} catch (error) {
+					if (isMissingTableError(error)) {
+						lastError = error;
+						continue;
+					}
+					throw error;
+				}
+			}
+			return { data: [], error: lastError || new Error('No available table for ' + table), missingTable: !!lastError && isMissingTableError(lastError) };
 		};
 		const showAuthenticatedApp = async (session) => {
 			if (!session) return;
@@ -513,7 +563,7 @@
 		document.getElementById('saveCapture').addEventListener('click', async () => {
 			const label = document.getElementById('captureLabel').value.trim() || 'Unsorted capture';
 			try {
-				const data = await saveRecord('captures', { label: cleanText(label), content: captureText.value.trim(), category: captureCategory, detail: 'Captured and ready for review' });
+				const data = await saveRecord('captures', { label: cleanText(label), detail: captureText.value.trim() || 'Captured and ready for review' });
 				addPlanItem(label, 'Captured and ready for review', captureCategory, 'captures', data.id);
 				await logActivity('created record', 'captures');
 				setSyncStatus('Saved to Supabase.', true);
@@ -521,19 +571,21 @@
 				document.getElementById('captureLabel').value = '';
 				closeModal();
 			} catch (error) {
-				showToast('Unable to save capture. Check your connection and try again.', true);
+				showToast('Unable to save capture: ' + (error.message || 'Check your connection and try again.'), true);
 			}
 		});
 		document.getElementById('cookButton').addEventListener('click', async (event) => {
 			try {
-				const [topics, errors] = await Promise.all([
-					requireSupabase().from('curriculum_topics').select('name').neq('status', 'MASTERED').limit(2),
-					requireSupabase().from('error_bank').select('mistake, topic').neq('status', 'RESOLVED').limit(1)
+				const [topicsResult, errorsResult] = await Promise.all([
+					runQueryWithFallbacks('curriculum_topics', (candidate) => requireSupabase().from(candidate).select('name').neq('status', 'MASTERED').limit(2), tableAliases.curriculum_topics),
+					runQueryWithFallbacks('error_bank', (candidate) => requireSupabase().from(candidate).select('mistake, topic').neq('status', 'RESOLVED').limit(1), tableAliases.error_bank)
 				]);
-				if (topics.error) throw topics.error;
-				if (errors.error) throw errors.error;
-				const recommendations = (topics.data || []).map((topic) => ({ title:'Revise ' + topic.name, topic:topic.name, duration_minutes:35, priority:'HIGH', status:'PLANNED', goal:'Close a curriculum gap' }));
-				(errors.data || []).forEach((item) => recommendations.push({ title:'Repair error', topic:item.topic || item.mistake, duration_minutes:20, priority:'HIGH', status:'PLANNED', goal:'Practise and verify the correction' }));
+				if (topicsResult.error && !topicsResult.missingTable) throw topicsResult.error;
+				if (errorsResult.error && !errorsResult.missingTable) throw errorsResult.error;
+				const topics = topicsResult.missingTable ? [] : (topicsResult.data || []);
+				const errors = errorsResult.missingTable ? [] : (errorsResult.data || []);
+				const recommendations = topics.map((topic) => ({ title:'Revise ' + topic.name, topic:topic.name, duration_minutes:35, priority:'HIGH', status:'PLANNED', goal:'Close a curriculum gap' }));
+				errors.forEach((item) => recommendations.push({ title:'Repair error', topic:item.topic || item.mistake, duration_minutes:20, priority:'HIGH', status:'PLANNED', goal:'Practise and verify the correction' }));
 				if (!recommendations.length) { showToast('Add a topic or error before cooking a plan.'); return; }
 				for (const recommendation of recommendations.slice(0, 3)) {
 					const data = await saveRecord('study_sessions', recommendation);
@@ -786,7 +838,7 @@
 				setSyncStatus('Saved to Supabase.', true);
 				showToast('Saved successfully.');
 			} catch (error) {
-				document.getElementById('recordMessage').textContent = 'Unable to save. Check the form and your connection, then try again.';
+				document.getElementById('recordMessage').textContent = 'Unable to save: ' + (error.message || 'Check the form and your connection, then try again.');
 			}
 		});
 		const exportData = async (format) => {
@@ -816,8 +868,13 @@
 		document.getElementById('exportPdfButton').addEventListener('click', () => exportData('pdf').catch(() => showToast('Unable to prepare the PDF. Allow pop-ups and try again.', true)));
 		const loadCaptures = async () => {
 			try {
-				const { data: captures, error } = await requireSupabase().from('captures').select('id, label, detail').order('created_at', { ascending: false });
-				if (error) throw error;
+				const result = await runQueryWithFallbacks('captures', (candidate) => requireSupabase().from(candidate).select('id, label, detail').order('created_at', { ascending: false }), tableAliases.captures);
+				if (result.missingTable || result.error) {
+					cacheRows('captures', readOffline('captures'));
+					readOffline('captures').forEach((capture) => addPlanItem(capture.label, capture.detail, 'CAPTURE', 'captures', capture.id));
+					return;
+				}
+				const captures = result.data || [];
 				cacheRows('captures', captures);
 				captures.forEach((capture) => addPlanItem(capture.label, capture.detail, 'CAPTURE', 'captures', capture.id));
 			} catch (error) {
@@ -827,8 +884,14 @@
 		};
 		const loadRows = async (table, targetId, addToPlan = false) => {
 			try {
-				const { data: rows, error } = await requireSupabase().from(table).select('*');
-				if (error) throw error;
+				const result = await runQueryWithFallbacks(table, (candidate) => requireSupabase().from(candidate).select('*'), tableAliases[table] || []);
+				if (result.missingTable || result.error) {
+					const target = document.getElementById(targetId);
+					cacheRows(table, []);
+					if (target) target.innerHTML = '<p>No records saved yet.</p>';
+					return;
+				}
+				const rows = result.data || [];
 				cacheRows(table, rows);
 				const target = document.getElementById(targetId);
 				rows.forEach((row) => {
@@ -838,6 +901,12 @@
 					addListItem(target, label, detail, rowStatus(row), table, row.id);
 				});
 			} catch (error) {
+				if (isMissingTableError(error)) {
+					const target = document.getElementById(targetId);
+					cacheRows(table, []);
+					if (target) target.innerHTML = '<p>No records saved yet.</p>';
+					return;
+				}
 				showToast('Unable to load data. Check your connection and try again.', true);
 				const target = document.getElementById(targetId);
 				readOffline(table).forEach((row) => {
@@ -854,16 +923,20 @@
 				const weekStart = new Date(now);
 				weekStart.setDate(now.getDate() - dayOffset);
 				weekStart.setHours(0, 0, 0, 0);
-				const results = await Promise.all([
-					client.from('study_sessions').select('duration_minutes').eq('status', 'COMPLETED'),
-					client.from('study_sessions').select('id').eq('status', 'COMPLETED').gte('completed_at', weekStart.toISOString()),
-					client.from('curriculum_topics').select('status'),
-					client.from('error_bank').select('status').neq('status', 'RESOLVED'),
-					client.from('paper_attempts').select('percentage')
+				const [sessionsResult, completedResult, topicsResult, errorsResult, papersResult] = await Promise.all([
+					runQueryWithFallbacks('study_sessions', (candidate) => client.from(candidate).select('duration_minutes').eq('status', 'COMPLETED'), tableAliases.study_sessions),
+					runQueryWithFallbacks('study_sessions', (candidate) => client.from(candidate).select('id').eq('status', 'COMPLETED').gte('completed_at', weekStart.toISOString()), tableAliases.study_sessions),
+					runQueryWithFallbacks('curriculum_topics', (candidate) => client.from(candidate).select('status'), tableAliases.curriculum_topics),
+					runQueryWithFallbacks('error_bank', (candidate) => client.from(candidate).select('status').neq('status', 'RESOLVED'), tableAliases.error_bank),
+					runQueryWithFallbacks('paper_attempts', (candidate) => client.from(candidate).select('percentage'), tableAliases.paper_attempts)
 				]);
-				const failedResult = results.find((result) => result.error);
+				const failedResult = [sessionsResult, completedResult, topicsResult, errorsResult, papersResult].find((result) => result.error && !result.missingTable);
 				if (failedResult) throw failedResult.error;
-				const [sessions, completed, topics, errors, papers] = results;
+				const sessions = sessionsResult.missingTable ? { data: [] } : sessionsResult;
+				const completed = completedResult.missingTable ? { data: [] } : completedResult;
+				const topics = topicsResult.missingTable ? { data: [] } : topicsResult;
+				const errors = errorsResult.missingTable ? { data: [] } : errorsResult;
+				const papers = papersResult.missingTable ? { data: [] } : papersResult;
 				const values = [
 					['Study time', (sessions.data || []).reduce((total, row) => total + (row.duration_minutes || 0), 0) + ' min'],
 					['Sessions this week', (completed.data || []).length],
@@ -878,8 +951,15 @@
 		};
 		const loadNextAssessment = async () => {
 			try {
-				const { data, error } = await requireSupabase().from('assessments').select('id, name, assessment_date').eq('status', 'UPCOMING').gte('assessment_date', new Date().toISOString().slice(0, 10)).order('assessment_date').limit(1).maybeSingle();
-				if (error) throw error;
+				const result = await runQueryWithFallbacks('assessments', (candidate) => requireSupabase().from(candidate).select('id, name, assessment_date').eq('status', 'UPCOMING').gte('assessment_date', new Date().toISOString().slice(0, 10)).order('assessment_date').limit(1).maybeSingle(), tableAliases.assessments);
+				if (result.missingTable || result.error) {
+					document.getElementById('assessmentCount').textContent = '—';
+					document.getElementById('assessmentLabel').textContent = 'No countdown added';
+					document.getElementById('assessmentName').textContent = 'Add an exam, test, or study milestone.';
+					document.getElementById('deleteCountdownButton').hidden = true;
+					return;
+				}
+				const data = result.data;
 				if (!data) {
 					document.getElementById('assessmentCount').textContent = '—';
 					document.getElementById('assessmentLabel').textContent = 'No countdown added';
@@ -896,15 +976,15 @@
 				deleteButton.dataset.deleteId = data.id;
 				deleteButton.hidden = false;
 			} catch (error) {
-				showToast('Unable to load assessments.', true);
+				if (!isMissingTableError(error)) showToast('Unable to load assessments.', true);
 			}
 		};
 		const loadNextCountdown = async () => {
 			try {
-				const { data, error } = await requireSupabase().from('countdowns').select('id, title, event_type, target_at').not('target_at', 'is', null).gte('target_at', new Date().toISOString()).order('target_at').limit(1).maybeSingle();
-				if (error) throw error;
+				const result = await runQueryWithFallbacks('countdowns', (candidate) => requireSupabase().from(candidate).select('id, title, event_type, target_at').not('target_at', 'is', null).gte('target_at', new Date().toISOString()).order('target_at').limit(1).maybeSingle(), tableAliases.countdowns);
 				const deleteButton = document.getElementById('deleteCountdownButton');
-				if (!data) { await loadNextAssessment(); return; }
+				if (result.missingTable || result.error || !result.data) { await loadNextAssessment(); return; }
+				const data = result.data;
 				const hours = Math.max(0, Math.ceil((new Date(data.target_at) - new Date()) / 3600000));
 				document.getElementById('assessmentCount').textContent = hours;
 				document.getElementById('assessmentLabel').textContent = hours === 1 ? 'hour until ' + data.event_type.toLowerCase() : 'hours until ' + data.event_type.toLowerCase();
@@ -913,7 +993,7 @@
 				deleteButton.dataset.deleteId = data.id;
 				deleteButton.hidden = false;
 			} catch (error) {
-				if (!String(error.message || error).includes('countdowns')) showToast('Unable to load countdowns.', true);
+				if (!isMissingTableError(error)) showToast('Unable to load countdowns.', true);
 			}
 		};
 		const signOut = () => {
@@ -928,9 +1008,20 @@
 				if (error) throw error;
 				if (session) await showAuthenticatedApp(session);
 			} catch (error) {
+				reportBackendError(error);
 				setAuthMessage('Unable to restore your session. Please sign in again.');
 			}
 		};
+		document.getElementById('retryBackendButton').addEventListener('click', async (event) => {
+			event.currentTarget.disabled = true;
+			if (!supabaseClient && !window.supabase) await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; script.onload = resolve; script.onerror = resolve; document.head.appendChild(script); });
+			supabaseClient = createSupabaseClient();
+			if (supabaseClient) { markBackendAvailable(); supabaseClient.auth.onAuthStateChange((authEvent, session) => { if (session) window.setTimeout(() => showAuthenticatedApp(session), 0); else if (authEvent === 'SIGNED_OUT') signOut(); }); await bootAuth(); }
+			else markBackendUnavailable();
+			event.currentTarget.disabled = false;
+		});
+		window.addEventListener('offline', markBackendUnavailable);
+		window.addEventListener('online', () => { if (supabaseClient) syncOfflineQueue(); else document.getElementById('retryBackendButton').click(); });
 		if (supabaseClient) {
 			supabaseClient.auth.onAuthStateChange((event, session) => {
 				if (session) {
